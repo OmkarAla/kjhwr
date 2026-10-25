@@ -3,3 +3,4 @@
 data/app.db
 __pycache__/
 node_modules/
+.playwright-mcp/
