@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime as dt
 import time as ttime
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 import requests
@@ -52,7 +52,7 @@ def _retry_fetch(url: str, params: dict, cfg: IngestConfig) -> list:
                 return data if isinstance(data, list) else []
             if r.status_code not in (429, 500, 502, 503, 504):
                 return []
-        except requests.RequestException:
+        except (requests.RequestException, ValueError):
             pass
         if attempt < cfg.max_retries:
             ttime.sleep(cfg.backoff_s[min(attempt, len(cfg.backoff_s) - 1)])
@@ -69,7 +69,8 @@ def fetch_fuelhh(cfg: IngestConfig) -> list[dict]:
         if cfg.http_get is not None:
             out += [r for r in cfg.http_get("fuelhh", params) if r.get("fuelType") == "WIND"]
         else:
-            out += _retry_fetch(f"{BASE}/datasets/FUELHH/stream", params, cfg)
+            out += [r for r in _retry_fetch(f"{BASE}/datasets/FUELHH/stream", params, cfg)
+                    if r.get("fuelType") == "WIND"]
             ttime.sleep(cfg.polite_delay_s)
     return out
 
@@ -154,6 +155,8 @@ def run_ingest(cfg: IngestConfig) -> dict:
         act = [{"t": x["t"], "mw": x["mw"]} for x in act if x["mw"] is not None]
         fc = [{"t": t, "mw": mw} for t, mw in sorted(series.items()) if t.startswith(d)]
         m = compute_metrics(act, fc)
+        if m["n_hours"] == 0:
+            m = {"mae": None, "rmse": None, "mape": None, "bias": None, "n_hours": 0}
         gap = "" if m["n_hours"] > 0 else "no_metric_window"
         con.execute(
             "INSERT INTO metrics_day VALUES (?,?,?,?,?,?,?,?,?,?,?)",
@@ -167,7 +170,10 @@ def run_ingest(cfg: IngestConfig) -> dict:
     scored = [r for r in day_out if r["metrics"] and r["n_hours"] > 0]
     if scored:
         total = sum(r["n_hours"] for r in scored)
-        w = lambda key: sum(r["metrics"][key] * r["n_hours"] for r in scored) / total
+
+        def w(key: str) -> float:
+            return sum(r["metrics"][key] * r["n_hours"] for r in scored) / total
+
         con.execute(
             "INSERT INTO metrics_month VALUES (?,?,?,?,?,?,?)",
             ("2026-01", round(w("mae"), 3), round(w("rmse"), 3), round(w("mape"), 3),
@@ -183,5 +189,6 @@ def run_ingest(cfg: IngestConfig) -> dict:
         "actual_hours": len(hourly),
         "forecast_revisions": len(by_pub),
         "days": len(day_out),
-        "days_with_decision": len([r for r in day_out if r["metrics"] is not None]),
+        "days_with_decision": len([r for r in day_out
+                                   if r["metrics"] is not None and r["n_hours"] > 0]),
     }

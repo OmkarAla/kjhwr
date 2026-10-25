@@ -85,3 +85,22 @@ def test_run_ingest_gap_day_flagged(tmp_path):
     day = dict(con.execute("SELECT * FROM metrics_day WHERE delivery_date='2026-01-02'").fetchone())
     assert day["gap_flag"] == "no_decision_forecast"
     assert day["decision_publish_time"] is None
+
+
+def test_decision_day_without_measured_hours_writes_nulls(tmp_path):
+    def no_actuals_http(kind: str, _p: dict) -> list:
+        return WIND if kind == "windfor" else []
+
+    db = tmp_path / "na.db"
+    summary = run_ingest(IngestConfig(db_path=db, http_get=no_actuals_http))
+    assert summary["days_with_decision"] == 0
+    con = sqlite3.connect(db)
+    con.row_factory = sqlite3.Row
+    day = dict(con.execute("SELECT * FROM metrics_day WHERE delivery_date='2026-01-02'").fetchone())
+    assert day["decision_publish_time"] == "2026-01-01T11:30:00Z"
+    assert day["mae"] is None and day["rmse"] is None and day["mape"] is None and day["bias"] is None
+    assert day["n_hours"] == 0
+    assert day["gap_flag"] == "no_metric_window"
+    assert day["forecast_mean"] == round((4500 + 3800 + 5100) / 3, 3)
+    assert day["actual_mean"] is None
+    con.close()
