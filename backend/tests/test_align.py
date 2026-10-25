@@ -28,6 +28,23 @@ def test_dedupes_to_latest_revision():
     assert hourly_actuals(rows) == [{"t": "2026-01-02T00:00:00Z", "mw": 1000.0}]
 
 
+def test_dedupe_wins_on_publish_time_not_input_order():
+    rows = [
+        _row("2026-01-02T00:00:00Z", "2026-01-02T13:00:00Z", 900.0),   # latest publish, appears FIRST
+        _row("2026-01-02T00:00:00Z", "2026-01-02T03:00:00Z", 100.0),
+        _row("2026-01-02T00:30:00Z", "2026-01-02T13:30:00Z", 1100.0),
+    ]
+    assert hourly_actuals(rows) == [{"t": "2026-01-02T00:00:00Z", "mw": 1000.0}]
+
+
+def test_generation_as_string_is_coerced():
+    rows = [
+        _row("2026-01-02T00:00:00Z", "2026-01-02T03:00:00Z", "1000"),
+        _row("2026-01-02T00:30:00Z", "2026-01-02T03:30:00Z", "2000.0"),
+    ]
+    assert hourly_actuals(rows) == [{"t": "2026-01-02T00:00:00Z", "mw": 1500.0}]
+
+
 def test_partial_hour_keeps_single_half_hour_value():
     rows = [_row("2026-01-02T02:00:00Z", "2026-01-02T05:00:00Z", 800.0)]
     assert hourly_actuals(rows) == [{"t": "2026-01-02T02:00:00Z", "mw": 800.0}]

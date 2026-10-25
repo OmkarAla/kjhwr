@@ -5,7 +5,8 @@ from typing import Iterable
 
 
 def _parse(t: str) -> datetime:
-    return datetime.fromisoformat(t.replace("Z", "+00:00"))
+    dt = datetime.fromisoformat(t.replace("Z", "+00:00"))
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
 def _iso(dt: datetime) -> str:
@@ -14,7 +15,8 @@ def _iso(dt: datetime) -> str:
 
 def hourly_actuals(half_hourly: Iterable[dict]) -> list[dict]:
     """Dedup FUELHH rows to latest publishTime per startTime, then average the
-    two half-hours of each clock hour into one hourly MW value."""
+    two half-hours of each clock hour into one hourly MW value. Equal
+    publishTime ties keep the first-seen row."""
     latest: dict[str, tuple[datetime, float]] = {}
     for row in half_hourly:
         t = row["startTime"]
