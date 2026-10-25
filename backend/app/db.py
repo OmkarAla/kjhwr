@@ -27,7 +27,9 @@ CREATE TABLE IF NOT EXISTS ingest_meta (
 
 def connect(db_path: str | Path) -> sqlite3.Connection:
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-    con = sqlite3.connect(db_path)
+    # check_same_thread=False: the API shares one app-lifetime connection
+    # across FastAPI's threadpool (read-only workload, single-worker deploy).
+    con = sqlite3.connect(db_path, check_same_thread=False)
     con.row_factory = sqlite3.Row
     return con
 
