@@ -2555,7 +2555,8 @@ Frontend:
 - Forecasts: Elexon **WINDFOR** hourly revisions; ALL January revisions ingested.
 - **Decision revision** = latest revision published on D-1 with `publishTime ≤ 13:00 UTC`
   whose `startTime` coverage spans the full delivery day; fallback chain (earliest covering
-  on D-1 → earliest covering ≤ D-2 → flagged gap) in `app/etl/decision.py`.
+  published ≤ D-2, the in-force view → earliest covering on D-1 after the gate → flagged gap)
+  in `app/etl/decision.py`.
 - MAPE/RMSE/MAE/Bias computed over hours where actual ≥ 1 MW; `n_hours` carries the count.
 - Month aggregate: hour-weighted mean of daily MAE/RMSE/MAPE/Bias.
 
