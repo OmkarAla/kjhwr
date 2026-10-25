@@ -5,3 +5,5 @@ __pycache__/
 node_modules/
 .playwright-mcp/
 .worktrees/
+venv/
+.pytest_cache/
