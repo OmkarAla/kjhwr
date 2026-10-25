@@ -22,7 +22,8 @@ def covering_candidates(revisions: list[dict], delivery_day: date) -> list[dict]
 def decision_revision(revisions: list[dict], delivery_day: date) -> dict | None:
     """Spec §4 rule: latest covering revision on D-1 with publishTime <= 13:00 UTC;
     else earliest covering published <= D-2 (in force at decision time);
-    else earliest covering on D-1 (late); else None (gap day)."""
+    else earliest covering on D-1 (late); else None (gap day).
+    Revisions: dicts with publishTime/start_time_first/start_time_last (ISO 8601, Z)."""
     d1 = delivery_day - timedelta(days=1)
     covering = covering_candidates(revisions, delivery_day)
 

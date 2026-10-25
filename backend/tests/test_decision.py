@@ -39,6 +39,11 @@ def test_full_day_coverage_required():
     assert decision_revision(revs, D3) is None
 
 
+def test_publish_on_delivery_day_is_never_a_decision():
+    revs = [_rev("2026-01-03T11:30:00Z", W_FIRST, W_LAST)]
+    assert decision_revision(revs, D3) is None
+
+
 def test_fallback_1_earliest_covering_on_d_minus_1():
     revs = [
         _rev("2026-01-02T18:30:00Z", W_FIRST, W_LAST),
