@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+"""Generates the committed Jan-2026 seed CSVs (offline ETL fallback + Docker-bake truth).
+Regeneration is near-reproducible; the committed snapshot is authoritative for deployments."""
+
 import csv
 import sys
 from pathlib import Path
@@ -15,15 +18,15 @@ WIND_COLS = ["publishTime", "startTime", "generation"]
 
 
 def main() -> None:
-    cfg = IngestConfig(db_path=Path("nonexistent.db"))
+    cfg = IngestConfig(db_path=Path("nonexistent.db"))  # db_path unused by fetch_*; run_ingest never called here
     OUT.mkdir(parents=True, exist_ok=True)
     fuel = fetch_fuelhh(cfg)
+    wind = fetch_windfor(cfg)
     with (OUT / "fuelhh_wind_jan2026.csv").open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=FUEL_COLS)
         w.writeheader()
         for r in fuel:
             w.writerow({k: r.get(k) for k in FUEL_COLS})
-    wind = fetch_windfor(cfg)
     with (OUT / "windfor_jan2026.csv").open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=WIND_COLS)
         w.writeheader()
