@@ -21,6 +21,10 @@ def test_metrics_hand_computed():
         "bias": round(sum(errs) / 3, 3),
         "n_hours": 3,
     }
+    assert m["mae"] == 50.0
+    assert m["rmse"] == 64.55
+    assert m["mape"] == 33.333
+    assert m["bias"] == -16.667
 
 
 def test_hours_without_forecast_or_actual_are_skipped():
@@ -49,3 +53,22 @@ def test_hourly_error_rows_including_missing_sides():
 def test_mape_guard_below_floor():
     m = compute_metrics([_pt("2026-01-05T00:00:00Z", 0.5)], [_pt("2026-01-05T00:00:00Z", 999.0)])
     assert m["n_hours"] == 0
+
+
+def test_subfloor_row_keeps_err_but_pct_is_none():
+    hourly = forecast_hourly_error(
+        [_pt("2026-01-05T00:00:00Z", 0.5)], [_pt("2026-01-05T00:00:00Z", 999.0)]
+    )
+    assert hourly == [
+        {"t": "2026-01-05T00:00:00Z", "forecast": 999.0, "actual": 0.5,
+         "err": 998.5, "abs_err": 998.5, "pct_err": None}
+    ]
+
+
+def test_floor_boundary_actual_exactly_one_mw_is_included():
+    m = compute_metrics([_pt("2026-01-05T00:00:00Z", 1.0)], [_pt("2026-01-05T00:00:00Z", 2.0)])
+    assert m["n_hours"] == 1 and m["mae"] == 1.0
+    hourly = forecast_hourly_error(
+        [_pt("2026-01-05T00:00:00Z", 1.0)], [_pt("2026-01-05T00:00:00Z", 2.0)]
+    )
+    assert hourly[0]["pct_err"] == 100.0

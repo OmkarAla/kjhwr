@@ -38,7 +38,7 @@ def compute_metrics(actuals: Iterable[dict], forecast: Iterable[dict]) -> dict:
 
 
 def forecast_hourly_error(actuals: Iterable[dict], forecast: Iterable[dict]) -> list[dict]:
-    """Row per joined hour; err/abs_err=None on a missing side; pct_err=None below floor."""
+    """Row per joined hour; err/abs_err=None on a missing side; pct_err=None on a missing side or actual below floor."""
     out = []
     for t, v in _join(actuals, forecast).items():
         f, a = v["forecast"], v["actual"]
