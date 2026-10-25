@@ -1,0 +1,124 @@
+- generic [ref=e710]:
+  - generic [ref=e711] [cursor=pointer]:
+    - button "GET /datasets/FUELHH/stream Half-hourly generation outturn by fuel type (FUELHH) stream" [expanded] [ref=e712]:
+      - generic [ref=e713]: GET
+      - generic [ref=e714]:
+        - generic [ref=e715]: /datasets/FUELHH/stream
+        - generic [ref=e718]: Half-hourly generation outturn by fuel type (FUELHH) stream
+    - button "get /datasets/FUELHH/stream" [expanded] [ref=e719]
+  - generic [ref=e723]:
+    - generic [ref=e724]:
+      - generic [ref=e725]:
+        - heading "Parameters" [level=4] [ref=e728] [cursor=pointer]
+        - button "Try it out" [ref=e730] [cursor=pointer]
+      - table [ref=e733]:
+        - rowgroup [ref=e734]:
+          - row [ref=e735]:
+            - columnheader "Name" [ref=e736]
+            - columnheader "Description" [ref=e737]
+        - rowgroup [ref=e738]:
+          - row [ref=e739]:
+            - cell "publishDateTimeFrom string($date-time) (query)" [ref=e740]:
+              - generic [ref=e741]: publishDateTimeFrom
+              - generic [ref=e742]:
+                - text: string
+                - generic [ref=e743]: ($date-time)
+              - generic [ref=e744]: (query)
+            - cell [ref=e745]:
+              - paragraph [ref=e747]: "Example : 2022-06-25T00:00:00Z"
+              - textbox "publishDateTimeFrom" [disabled] [ref=e748]: 2022-06-25T00:00:00Z
+          - row [ref=e749]:
+            - cell "publishDateTimeTo string($date-time) (query)" [ref=e750]:
+              - generic [ref=e751]: publishDateTimeTo
+              - generic [ref=e752]:
+                - text: string
+                - generic [ref=e753]: ($date-time)
+              - generic [ref=e754]: (query)
+            - cell [ref=e755]:
+              - paragraph [ref=e757]: "Example : 2022-06-26T00:00:00Z"
+              - textbox "publishDateTimeTo" [disabled] [ref=e758]: 2022-06-26T00:00:00Z
+          - row [ref=e759]:
+            - cell "settlementDateFrom string($date) (query)" [ref=e760]:
+              - generic [ref=e761]: settlementDateFrom
+              - generic [ref=e762]:
+                - text: string
+                - generic [ref=e763]: ($date)
+              - generic [ref=e764]: (query)
+            - cell [ref=e765]:
+              - paragraph [ref=e767]: "Example : 2022-09-20"
+              - textbox "settlementDateFrom" [disabled] [ref=e768]: 2022-09-20
+          - row [ref=e769]:
+            - cell "settlementDateTo string($date) (query)" [ref=e770]:
+              - generic [ref=e771]: settlementDateTo
+              - generic [ref=e772]:
+                - text: string
+                - generic [ref=e773]: ($date)
+              - generic [ref=e774]: (query)
+            - cell [ref=e775]:
+              - paragraph [ref=e777]: "Example : 2022-09-21"
+              - textbox "settlementDateTo" [disabled] [ref=e778]: 2022-09-21
+          - row [ref=e779]:
+            - cell "settlementPeriod array<integer> (query)" [ref=e780]:
+              - generic [ref=e781]: settlementPeriod
+              - generic [ref=e782]: array<integer>
+              - generic [ref=e783]: (query)
+            - cell [ref=e784]:
+              - paragraph [ref=e786]: List of Settlement Periods
+              - paragraph [ref=e788]: "Example : List [ 3, 4 ]"
+              - generic [ref=e789]:
+                - textbox [disabled] [ref=e791]: "3"
+                - textbox [disabled] [ref=e793]: "4"
+          - row [ref=e794]:
+            - cell "fuelType array<string> (query)" [ref=e795]:
+              - generic [ref=e796]: fuelType
+              - generic [ref=e797]: array<string>
+              - generic [ref=e798]: (query)
+            - cell [ref=e799]:
+              - paragraph [ref=e801]: Fuel Type e.g. NUCLEAR
+              - paragraph [ref=e803]: "Example : List [ \"NUCLEAR\" ]"
+              - textbox [disabled] [ref=e806]: NUCLEAR
+    - generic [ref=e808]:
+      - heading "Responses" [level=4] [ref=e810]
+      - region [ref=e812]:
+        - rowgroup [ref=e813]:
+          - row [ref=e814]:
+            - cell "Code" [ref=e815]
+            - cell "Description" [ref=e816]
+            - cell "Links" [ref=e817]
+        - rowgroup [ref=e818]:
+          - row [ref=e819]:
+            - cell "200" [ref=e820]
+            - cell "Data retrieved Media type text/plain Controls Accept header. Example Value" [ref=e821]:
+              - paragraph [ref=e824]: Data retrieved
+              - generic [ref=e826]:
+                - generic [ref=e827]: Media type
+                - combobox "Media Type" [ref=e829]:
+                  - option "text/plain" [selected]
+                  - option "application/json"
+                  - option "text/json"
+                - generic [ref=e830]:
+                  - text: Controls
+                  - code [ref=e831]: Accept
+                  - text: header.
+              - generic [ref=e832]:
+                - tablist [ref=e833]:
+                  - tab "Example Value" [selected] [ref=e834] [cursor=pointer]
+                  - tab "Schema" [ref=e835] [cursor=pointer]
+                - tabpanel "Example Value" [ref=e836]:
+                  - code [ref=e840]: "[ { \"dataset\": \"FUELINST\", \"publishTime\": \"2022-06-25T13:00:00Z\", \"startTime\": \"2022-06-25T13:00:00Z\", \"settlementDate\": \"2022-06-25\", \"settlementPeriod\": 3, \"fuelType\": \"BIOMASS\", \"generation\": 0 } ]"
+            - cell "No links" [ref=e841]
+          - row [ref=e842]:
+            - cell "400" [ref=e843]
+            - cell [ref=e844]:
+              - paragraph [ref=e847]: Error with query parameters - see response for details
+            - cell "No links" [ref=e848]
+          - row [ref=e849]:
+            - cell "429" [ref=e850]
+            - cell [ref=e851]:
+              - paragraph [ref=e854]: Too many requests
+            - cell "No links" [ref=e855]
+          - row [ref=e856]:
+            - cell "500" [ref=e857]
+            - cell [ref=e858]:
+              - paragraph [ref=e861]: Server error - please try again later
+            - cell "No links" [ref=e862]
