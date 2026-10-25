@@ -451,21 +451,22 @@ def covering_candidates(revisions: list[dict], delivery_day: date) -> list[dict]
 
 def decision_revision(revisions: list[dict], delivery_day: date) -> dict | None:
     """Spec §4 rule: latest covering revision on D-1 with publishTime <= 13:00 UTC;
-    else earliest covering on D-1; else earliest covering published <= D-2;
-    else None (gap day)."""
+    else earliest covering published <= D-2 (in force at decision time);
+    else earliest covering on D-1 (late); else None (gap day)."""
     d1 = delivery_day - timedelta(days=1)
     covering = covering_candidates(revisions, delivery_day)
 
     on_d1 = [r for r in covering if _parse(r["publishTime"]).date() == d1]
-    if on_d1:
-        early = [r for r in on_d1 if _parse(r["publishTime"]).time() <= CUTOFF]
-        if early:
-            return max(early, key=lambda r: _parse(r["publishTime"]))
-        return min(on_d1, key=lambda r: _parse(r["publishTime"]))
+    early = [r for r in on_d1 if _parse(r["publishTime"]).time() <= CUTOFF]
+    if early:
+        return max(early, key=lambda r: _parse(r["publishTime"]))
 
     before = [r for r in covering if _parse(r["publishTime"]).date() < d1]
     if before:
         return min(before, key=lambda r: _parse(r["publishTime"]))
+
+    if on_d1:
+        return min(on_d1, key=lambda r: _parse(r["publishTime"]))
     return None
 ```
 
