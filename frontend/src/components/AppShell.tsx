@@ -65,8 +65,8 @@ export function AppShell() {
         <main>
           {day.error && <ErrorBanner message={`day: ${day.error}`} onRetry={day.refetch} />}
           {(day.loading || !day.data) && !day.error && <Skeleton />}
-          {day.data && day.data.gap_flag !== '' && <GapChip flag={day.data.gap_flag} />}
-          {day.data && day.data.gap_flag !== 'no_decision_forecast' && (
+          {day.data && !day.loading && day.data.gap_flag !== '' && <GapChip flag={day.data.gap_flag} />}
+          {day.data && !day.loading && day.data.gap_flag !== 'no_decision_forecast' && (
             <>
               <h3 className="day-title">{activeDate}</h3>
               <KpiStrip metrics={day.data.metrics} title="DAY" />

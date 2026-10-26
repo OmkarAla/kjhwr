@@ -2024,8 +2024,8 @@ export function AppShell() {
         <main>
           {day.error && <ErrorBanner message={`day: ${day.error}`} onRetry={day.refetch} />}
           {(day.loading || !day.data) && !day.error && <Skeleton />}
-          {day.data && day.data.gap_flag !== '' && <GapChip flag={day.data.gap_flag} />}
-          {day.data && day.data.gap_flag !== 'no_decision_forecast' && (
+          {day.data && !day.loading && day.data.gap_flag !== '' && <GapChip flag={day.data.gap_flag} />}
+          {day.data && !day.loading && day.data.gap_flag !== 'no_decision_forecast' && (
             <>
               <h3 className="day-title">{activeDate}</h3>
               <KpiStrip metrics={day.data.metrics} title="DAY" />
@@ -2045,6 +2045,7 @@ export function AppShell() {
 ```
 
 (Amendments: overlay dropdown excludes the EFFECTIVE revision (`rev ?? decision_publish_time`); picking a day also resets the overlay selection.)
+(Amendment: panel contents render only when `!day.loading` — avoids a ≤250 ms stale-KPI flash while keeping the rail mounted during refetch.)
 
 Replace `frontend/src/App.tsx`:
 ```tsx
