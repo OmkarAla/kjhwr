@@ -2471,11 +2471,13 @@ def main() -> None:
     )
     summary = run_ingest(cfg)
     print(summary)
-    assert summary["days_with_decision"] >= 28, "seed bake: too few covering january days"
+    if summary["days_with_decision"] < 28:
+        raise SystemExit("seed bake: too few covering january days")
 
 
 if __name__ == "__main__":
     main()
+
 ```
 
 Final `backend/Dockerfile` (replaces Task 7 file):
@@ -2500,6 +2502,7 @@ tests/
 .pytest_cache/
 __pycache__/
 README.md
+
 ```
 
 Rebuild to prove the bake works:
@@ -2515,6 +2518,7 @@ Expected: printed summary with `days_with_decision` ≥ 28.
 {
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
+
 ```
 
 - [ ] **Step 3: Push repo and deploy Render + Vercel (manual, ~15 min)**
@@ -2542,10 +2546,10 @@ generation forecast for each January 2026 delivery day, and **quantify its accur
 (MAE / RMSE / MAPE / Bias) against Elexon BMRS actuals — the two numbers a day-ahead
 trading desk must reason with.
 
-**AI tools disclosure:** built with assistance from AI coding tools (opencode agent,
-GLM/Claude-class models) for code generation, planning, and test scaffolding. Domain
-rules (§ decision-revision rule), product design, and deployment choices were
-human-directed and are documented in `docs/`.
+**AI tools disclosure:** built with assistance from an AI coding agent (opencode CLI,
+GLM-class models) used for planning, code generation, and test scaffolding. Domain rules
+(the decision-revision rule), product design, and deployment choices were human-directed
+and are documented in `docs/`.
 
 ## Project structure
     project.md                    challenge brief
@@ -2558,21 +2562,21 @@ human-directed and are documented in `docs/`.
       app/etl/align.py            30-min → hourly actual alignment
       app/etl/metrics.py          MAE / RMSE / MAPE / Bias (+ floor rule)
       app/etl/decision.py         decision-revision selection (13:00 UTC cutoff rule)
-      app/etl/ingest.py           chunked Elexon ingest + SQLite writes
-      app/etl/seed loader         default_seed_http_get (offline deploy path)
+      app/etl/ingest.py           chunked Elexon ingest + SQLite writes (+ seed CSV loader)
       scripts/                    generate_seed.py · build_db.py · build_db_docker.py
-      tests/                      pytest suite (28 tests)
+      db_seed/                    committed copies of the seed CSVs (baked at image build)
+      tests/                      pytest suite (36 tests)
       Dockerfile                  python:3.12-slim, bakes app.db from seed CSVs
     frontend/
-      src/                        React 18 + TS: AppShell, ControlRail, MainChart,
-                                  KpiStrip, AccuracyStrip, States, api client, tests
+      src/                        React 19 + TS: AppShell, ControlRail, MainChart,
+                                  KpiStrip, AccuracyStrip, States, api client (18 vitest tests)
       Dockerfile                  node build → nginx serve (compose parity)
       vercel.json                 SPA rewrites
     docker-compose.yml            backend + frontend, local parity stack
 
 ## How to run (local docker)
     docker compose up --build -d
-    # UI:   http://localhost:8080   (nginx serves React, proxies /api)
+    # UI:   http://localhost:8080   (nginx serves React; browser fetches the API on :8000)
     # API:  http://localhost:8000/api/health
 
 ## How to run (dev)
@@ -2580,35 +2584,42 @@ Backend (Windows):
     cd backend
     python -m venv venv
     venv\Scripts\pip install -r requirements.txt -r requirements-dev.txt
-    venv\Scripts\pytest                       # full test suite
-    venv\Scripts\python scripts\build_db.py   # rebuild data/app.db (uses seed if API flaky: --source seed)
+    venv\Scripts\pytest                       # full test suite (36)
+    venv\Scripts\python scripts\build_db.py   # rebuild data/app.db (--source seed for offline)
     venv\Scripts\uvicorn app.api.main:create_app --factory --port 8000
 Frontend:
     cd frontend
     npm install
     npm run dev        # http://localhost:5173 (VITE_API_BASE defaults to :8000)
-    npm test / npm run build / npm run lint
+    npm test           # 18 tests
+    npm run build / npm run lint
 
 ## Data rules (the important ones)
-- Actuals: Elexon **FUELHH** (`fuelType=WIND`), 30-min rows, deduped to latest `publishTime`
-  per `startTime`; hourly actual = mean of the two half-hours.
-- Forecasts: Elexon **WINDFOR** hourly revisions; ALL January revisions ingested.
+- Actuals: Elexon **FUELHH** (`fuelType=WIND`), 30-min rows, deduped to the latest
+  `publishTime` per `startTime`; the hourly actual is the mean of its two half-hours.
+- Forecasts: Elexon **WINDFOR** hourly revisions; all January revisions ingested.
 - **Decision revision** = latest revision published on D-1 with `publishTime ≤ 13:00 UTC`
-  whose `startTime` coverage spans the full delivery day; fallback chain (earliest covering
-  published ≤ D-2, the in-force view → earliest covering on D-1 after the gate → flagged gap)
-  in `app/etl/decision.py`.
-- MAPE/RMSE/MAE/Bias computed over hours where actual ≥ 1 MW; `n_hours` carries the count.
-- Month aggregate: hour-weighted mean of daily MAE/RMSE/MAPE/Bias.
+  whose covered `startTime`s span the full delivery day; fallback chain (earliest covering
+  publish < D-1 — the in-force view → earliest covering publish on D-1 after the gate →
+  flagged gap) lives in `app/etl/decision.py`.
+- MAPE/RMSE/MAE/Bias are computed over hours where actual ≥ 1 MW; `n_hours` carries the count.
+- Month aggregate is the hour-weighted mean of the daily values. **Note:** the month RMSE
+  is an approximation (hour-weighted mean of daily RMSEs), not the exact month-long RMSE
+  recomputed from hourly residuals.
 
 ## API
-    GET /api/health                      → {status, ingested_at, day_count}
-    GET /api/calendar                    → per-day meta (picker + heatmap)
+    GET /api/health                       → {status, ingested_at, day_count}
+    GET /api/calendar                     → per-day meta (picker + heatmap)
     GET /api/day/{YYYY-MM-DD}?revision=&overlay=  → full payload incl. ALL revisions
-    GET /api/month                       → month aggregate + per-day rows
+    GET /api/month                        → month aggregate + per-day rows
 
 ## Live deployment
-    UI:  https://<vercel>.vercel.app            ← verify in incognito
+    UI:  https://<vercel>.vercel.app           (set VITE_API_BASE at build; SPA rewrites)
     API: https://<render-host>.onrender.com/api/health   (Render free cold start ≈ 50 s)
+
+Deploy placement: backend = Render Web Service (root `backend`, Docker runtime, health
+check `/api/health`, env `ALLOWED_ORIGINS=https://<vercel>.vercel.app`); frontend = Vercel
+(root `frontend`, env `VITE_API_BASE=https://<render-host>.onrender.com`).
 ````
 
 - [ ] **Step 5: Video outlines**
@@ -2622,8 +2633,9 @@ Frontend:
      the market told you the morning you bid."
 1:15 Precision: overlay 22:30 revision vs decision — "look how confident maidens got
      closer to the day." Hourly error bars show over/under buying hour by hour.
-2:30 Trust: MAPE calendar — the month's worst days light up; click into 14 Jan.
-     KPI cards quantify: monthly MAE ≈ 1.3 GW MAPE ≈ 20%.
+2:30 Trust: MAPE calendar — the month's worst days light up (08 Jan tops it at 54.1%;
+     click into 28 Jan, the runner-up heat cell at 52.6%). KPI cards quantify:
+     monthly MAE ≈ 2.0 GW, MAPE ≈ 20%.
 3:45 Confidence: seeded data, validated coverage, every figure reproducible from
      BMRS alone; deep links (?date=…) put any day two clicks away.
 4:30 Close: bulletin-quick — "the portal turns forecast error into an operating number."
@@ -2637,12 +2649,12 @@ Frontend:
      React (Vercel); JSON contract in docs.
 0:45 Ingest: chunked day/window requests (31 + 62), retry/backoff on 429,
      dedupe latest publishTime, committed seed CSVs = offline parity.
-1:30 Decision rule: backend/app/etl/decision.py walkthrough + 6 tests covering
+1:30 Decision rule: backend/app/etl/decision.py walkthrough + 7 tests covering
      the 13:00 cutoff, late-open hour coverage, fallback chain, Jan-1 edge.
 2:15 Metrics: floor rule and hand-computed golden test (test_metrics).
-2:45 API: 4 endpoints, CORS pinned, TestClient suite (10 tests), all-revisions
+2:45 API: 4 endpoints, CORS pinned, TestClient suite (12 tests), all-revisions
      response design → instantaneous scrubbing in UI.
-3:30 Frontend: URL-state deep links, AppShell composition, 9 vitest tests,
+3:30 Frontend: URL-state deep links, AppShell composition, 18 vitest tests,
      skeleton + error and gap states, responsive rail.
 4:15 Practices: TDD commit history, Docker parity local↔Render, plan+spec in docs,
      README AI-tool disclosure.
@@ -2655,11 +2667,13 @@ cd backend && venv\Scripts\pytest
 cd ..\frontend && npm test && npm run lint && npm run build
 git add -A && git commit -m "docs: readme + video outlines; chore: final config"
 ```
-Expected: backend 29 passed (28 incl. seed test) · frontend 9 passed · build green.
+Expected: backend 36 passed · frontend 18 passed · lint + build green.
 
 - [ ] **Step 7: Submission hygiene (brief §3.3)**
 
 Open in incognito: Vercel URL loads with chart (allow 50 s first-hit) · Render health JSON readable · GitHub repo public & viewable · README links verified. Fill the submission form with all four URLs.
+
+(Step 3 deploy + Step 7 submission form: performed in person after the branch merge — not automated in this session.)
 
 ---
 
