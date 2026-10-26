@@ -68,4 +68,19 @@ describe('AppShell', () => {
     await waitFor(() => expect(screen.getByTestId('state-date')).toHaveValue('2026-01-03'))
     expect(window.location.search).toContain('date=2026-01-03')
   })
+
+  it('recovers when a deep-linked revision is rejected', async () => {
+    window.history.replaceState(null, '', '/?date=2026-01-02&rev=2026-01-01T22:30:00Z')
+    vi.stubGlobal('fetch', vi.fn((url: string) => {
+      if (url.includes('revision=')) return Promise.resolve({ ok: false, status: 422 })
+      if (url.includes('/api/calendar')) return Promise.resolve({ ok: true, json: () => Promise.resolve(calendar) })
+      if (url.includes('/api/month')) return Promise.resolve({ ok: true, json: () => Promise.resolve(month) })
+      const m = url.match(/api\/day\/(\d{4}-\d{2}-\d{2})/) as RegExpMatchArray
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(dayPayload(m[1])) })
+    }))
+    render(<AppShell />)
+    const railValue = await screen.findByTestId('selected-rev')
+    expect(railValue).toHaveTextContent('D-1')
+    expect(window.location.search).not.toContain('rev=')
+  })
 })

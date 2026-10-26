@@ -1979,7 +1979,7 @@ import { ErrorBanner, GapChip, Skeleton } from './States'
 
 function parseState(): { date: string | null; rev: string | null; overlayRev: string | null } {
   const p = new URLSearchParams(window.location.search)
-  return { date: p.get('date'), rev: p.get('rev'), overlayRev: p.get('rev2') }
+  return { date: p.get('date') || null, rev: p.get('rev') || null, overlayRev: p.get('rev2') || null }
 }
 
 export function AppShell() {
@@ -1999,6 +1999,9 @@ export function AppShell() {
     [activeDate, rev])
   const day = useApi<DayResponse>(dayPath)
 
+  // oxlint-disable-next-line react/set-state-in-effect -- unrecoverable deep-linked revision: reset on async fetch result, cannot be moved to an event handler
+  useEffect(() => { if (day.error && !day.data && rev !== null) setRev(null) }, [day.error, day.data, rev])
+
   useEffect(() => {
     const p = new URLSearchParams()
     if (activeDate) p.set('date', activeDate)
@@ -2008,6 +2011,10 @@ export function AppShell() {
   }, [activeDate, rev, overlayRev])
 
   const onPickDay = useCallback((d: string) => { setDate(d); setRev(null); setOverlayRev(null) }, [])
+  const onSelectRev = useCallback((r: string | null) => {
+    setRev(r)
+    if (r != null && r === overlayRev) setOverlayRev(null)
+  }, [overlayRev])
   const selectedRev = rev ?? day.data?.decision_publish_time ?? null
 
   return (
@@ -2018,6 +2025,7 @@ export function AppShell() {
       </header>
 
       {calendar.error && <ErrorBanner message={`calendar: ${calendar.error}`} onRetry={calendar.refetch} />}
+      {month.error && <ErrorBanner message={`month: ${month.error}`} onRetry={month.refetch} />}
 
       <div className="shell-body">
         {day.data && activeDate && (
@@ -2029,7 +2037,7 @@ export function AppShell() {
             month={month.data}
             rev={rev}
             overlayRev={overlayRev}
-            onSelectRev={setRev}
+            onSelectRev={onSelectRev}
             onSelectOverlay={setOverlayRev} />
         )}
         <main>
@@ -2057,6 +2065,7 @@ export function AppShell() {
 
 (Amendments: overlay dropdown excludes the EFFECTIVE revision (`rev ?? decision_publish_time`); picking a day also resets the overlay selection.)
 (Amendment: panel contents render only when `!day.loading` — avoids a ≤250 ms stale-KPI flash while keeping the rail mounted during refetch.)
+(Amendments: URL params normalize empty strings to null; a rejected deep-linked revision auto-resets to auto (unrecoverable-state fix); picking the overlay value as the main revision clears the overlay; a month feed failure shows its own banner. Panel contents gated on !day.loading.)
 
 Replace `frontend/src/App.tsx`:
 ```tsx
@@ -2182,7 +2191,7 @@ main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; 
 ```bash
 cd frontend && npm test && npm run lint && npm run build
 ```
-Expected: 9 passed (2 hook + 2 kpi + 2 accstrip + 3 appshell). Fix test races until green.
+Expected: 17 passed (4 hook + 4 kpi + 1 format + 1 mainchart + 4 accstrip + 3 appshell). Fix test races until green.
 
 - [ ] **Step 8: Commit**
 
