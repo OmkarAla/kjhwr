@@ -30,3 +30,14 @@ def test_seed_http_end_to_end(tmp_path):
     day = dict(con.execute("SELECT * FROM metrics_day WHERE delivery_date='2026-01-02'").fetchone())
     assert day["decision_publish_time"] == "2026-01-01T11:30:00Z"
     assert day["mae"] == 200.0
+
+
+def test_seed_window_filtering(tmp_path):
+    (Path(tmp_path) / "fuelhh_wind_jan2026.csv").write_text(FUEL_CSV, encoding="utf-8")
+    (Path(tmp_path) / "windfor_jan2026.csv").write_text(WIND_CSV, encoding="utf-8")
+    http = default_seed_http_get(tmp_path)
+
+    assert len(http("fuelhh", {"settlementDateFrom": "2026-01-03", "settlementDateTo": "2026-01-03"})) == 0
+    assert len(http("fuelhh", {})) == 2
+    assert len(http("windfor", {"publishDateTimeFrom": "2026-01-01T11:30:00Z",
+                                "publishDateTimeTo": "2026-01-01T11:30:00Z"})) == 3

@@ -196,7 +196,10 @@ def run_ingest(cfg: IngestConfig) -> dict:
 
 
 def default_seed_http_get(seed_dir: str | Path) -> Callable[[str, dict], list]:
-    """Clause for offline deployments: reads the seed CSVs instead of hitting BMRS."""
+    """Clause for offline deployments: reads the seed CSVs instead of hitting BMRS.
+
+    (inclusive on both ends; run_ingest's dedupe absorbs boundary overlap between windows)
+    """
     seed = Path(seed_dir)
 
     def http_get(kind: str, params: dict) -> list:
