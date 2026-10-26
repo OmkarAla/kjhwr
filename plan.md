@@ -2258,14 +2258,24 @@ def default_seed_http_get(seed_dir: str | Path) -> Callable[[str, dict], list]:
     """Clause for offline deployments: reads the seed CSVs instead of hitting BMRS."""
     seed = Path(seed_dir)
 
-    def http_get(kind: str, _params: dict) -> list:
+    def http_get(kind: str, params: dict) -> list:
         name = "fuelhh_wind_jan2026.csv" if kind == "fuelhh" else "windfor_jan2026.csv"
-        import csv
         with (seed / name).open(newline="", encoding="utf-8") as f:
-            return [dict(row) for row in csv.DictReader(f)]
+            rows = [dict(r) for r in csv.DictReader(f)]
+        if kind == "fuelhh":
+            rows = [r for r in rows
+                    if (params.get("settlementDateFrom") is None or r["settlementDate"] >= params["settlementDateFrom"])
+                    and (params.get("settlementDateTo") is None or r["settlementDate"] <= params["settlementDateTo"])]
+        else:
+            rows = [r for r in rows
+                    if (params.get("publishDateTimeFrom") is None or r["publishTime"] >= params["publishDateTimeFrom"])
+                    and (params.get("publishDateTimeTo") is None or r["publishTime"] <= params["publishDateTimeTo"])]
+        return rows
 
     return http_get
 ```
+
+(Amendment: the seed loader honors the caller's date/publish windows — no full-CSV amplification — and `csv` is imported at module top.)
 
 (Place `import csv` at the top of the module instead of inside the closure — cleaner:)
 

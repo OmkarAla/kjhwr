@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import datetime as dt
 import time as ttime
 from collections.abc import Callable
@@ -192,3 +193,28 @@ def run_ingest(cfg: IngestConfig) -> dict:
         "days_with_decision": len([r for r in day_out
                                    if r["metrics"] is not None and r["n_hours"] > 0]),
     }
+
+
+def default_seed_http_get(seed_dir: str | Path) -> Callable[[str, dict], list]:
+    """Clause for offline deployments: reads the seed CSVs instead of hitting BMRS."""
+    seed = Path(seed_dir)
+
+    def http_get(kind: str, params: dict) -> list:
+        name = "fuelhh_wind_jan2026.csv" if kind == "fuelhh" else "windfor_jan2026.csv"
+        with (seed / name).open(newline="", encoding="utf-8") as f:
+            rows = [dict(r) for r in csv.DictReader(f)]
+        if kind == "fuelhh":
+            rows = [r for r in rows
+                    if (params.get("settlementDateFrom") is None
+                        or r["settlementDate"] >= params["settlementDateFrom"])
+                    and (params.get("settlementDateTo") is None
+                         or r["settlementDate"] <= params["settlementDateTo"])]
+        else:
+            rows = [r for r in rows
+                    if (params.get("publishDateTimeFrom") is None
+                        or r["publishTime"] >= params["publishDateTimeFrom"])
+                    and (params.get("publishDateTimeTo") is None
+                         or r["publishTime"] <= params["publishDateTimeTo"])]
+        return rows
+
+    return http_get
