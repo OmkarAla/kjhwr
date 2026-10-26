@@ -28,4 +28,31 @@ describe('AccuracyStrip', () => {
     fireEvent.click(screen.getByTitle('2026-01-27 · MAPE 23.0%'))
     expect(onPick).toHaveBeenCalledWith('2026-01-27')
   })
+
+  it('renders gap markers for hours without error', () => {
+    const hourlyWithGap: HourPoint[] = [
+      { t: '2026-01-02T00:00:00Z', forecast: null, actual: 3000, err: null, abs_err: null, pct_err: null },
+    ]
+    render(
+      <AccuracyStrip
+        hourly={hourlyWithGap}
+        dates={[{ date: '2026-01-02', mape: null }]}
+        onPickDay={() => {}}
+        selectedDate="2026-01-02"
+      />,
+    )
+    expect(screen.getByTitle('00:00 · no forecast')).toHaveAttribute('class', 'err-gap')
+  })
+
+  it('renders unknown-mape day cells with the gap background', () => {
+    render(
+      <AccuracyStrip
+        hourly={[]}
+        dates={[{ date: '2026-01-02', mape: null }]}
+        onPickDay={() => {}}
+        selectedDate="2026-01-02"
+      />,
+    )
+    expect(screen.getByTitle('2026-01-02 · MAPE —%').style.background).toContain('rgb(20, 29, 51)')
+  })
 })
