@@ -1,8 +1,6 @@
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { DayResponse } from '../types'
 
-const hourTicks: string[] = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00', '23:59']
-
 export function MainChart({ day, selectedRev, overlayRev }: {
   day: DayResponse
   selectedRev: string | null
@@ -26,7 +24,7 @@ export function MainChart({ day, selectedRev, overlayRev }: {
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
           <CartesianGrid stroke="#22303e" strokeDasharray="3 3" />
-          <XAxis dataKey="t" tickFormatter={(t: string) => t.slice(11, 16)} ticks={hourTicks.map((h) => `${day.date}T${h}Z`).slice(0, -1).concat(`${day.date}T23:00:00Z`)} stroke="#8ea3c4" fontSize={11} />
+          <XAxis dataKey="t" tickFormatter={(t: string) => t.slice(11, 16)} stroke="#8ea3c4" fontSize={11} />
           <YAxis domain={[0, 'auto']} stroke="#8ea3c4" fontSize={11} width={56} />
           <Tooltip
             formatter={(v, name) =>
