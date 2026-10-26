@@ -14,7 +14,6 @@ export function useApi<T>(path: string | null) {
     const pathChanged = lastPath.current !== path
     lastPath.current = path
     if (pathChanged) {
-      setData(null)
       setError(null)
       setLoading(true)
     }

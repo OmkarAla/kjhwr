@@ -1921,7 +1921,7 @@ export function ControlRail({ dates, date, onChangeDate, day, month, rev, overla
         onChange={(e) => onSelectOverlay(e.target.value || null)}>
         <option value="">none</option>
         {day.revisions
-          .filter((r) => r.publishTime !== rev)
+          .filter((r) => r.publishTime !== (rev ?? day.decision_publish_time))
           .map((r) => <option key={r.publishTime} value={r.publishTime}>{fmtTimeShort(r.publishTime)}</option>)}
       </select>
 
@@ -1996,7 +1996,7 @@ export function AppShell() {
     window.history.replaceState(null, '', `?${p.toString()}`)
   }, [activeDate, rev, overlayRev])
 
-  const onPickDay = useCallback((d: string) => { setDate(d); setRev(null) }, [])
+  const onPickDay = useCallback((d: string) => { setDate(d); setRev(null); setOverlayRev(null) }, [])
   const selectedRev = rev ?? day.data?.decision_publish_time ?? null
 
   return (
@@ -2043,6 +2043,8 @@ export function AppShell() {
   )
 }
 ```
+
+(Amendments: overlay dropdown excludes the EFFECTIVE revision (`rev ?? decision_publish_time`); picking a day also resets the overlay selection.)
 
 Replace `frontend/src/App.tsx`:
 ```tsx
