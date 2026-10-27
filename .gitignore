@@ -1,7 +1,10 @@
 .superpowers/
 .playwright-mcp/
-data/app.db
+data/*.db
+data/*.db-*
 __pycache__/
 node_modules/
-.playwright-mcp/
 .worktrees/
+venv/
+.pytest_cache/
+.env

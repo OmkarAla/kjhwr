@@ -451,21 +451,22 @@ def covering_candidates(revisions: list[dict], delivery_day: date) -> list[dict]
 
 def decision_revision(revisions: list[dict], delivery_day: date) -> dict | None:
     """Spec §4 rule: latest covering revision on D-1 with publishTime <= 13:00 UTC;
-    else earliest covering on D-1; else earliest covering published <= D-2;
-    else None (gap day)."""
+    else earliest covering published <= D-2 (in force at decision time);
+    else earliest covering on D-1 (late); else None (gap day)."""
     d1 = delivery_day - timedelta(days=1)
     covering = covering_candidates(revisions, delivery_day)
 
     on_d1 = [r for r in covering if _parse(r["publishTime"]).date() == d1]
-    if on_d1:
-        early = [r for r in on_d1 if _parse(r["publishTime"]).time() <= CUTOFF]
-        if early:
-            return max(early, key=lambda r: _parse(r["publishTime"]))
-        return min(on_d1, key=lambda r: _parse(r["publishTime"]))
+    early = [r for r in on_d1 if _parse(r["publishTime"]).time() <= CUTOFF]
+    if early:
+        return max(early, key=lambda r: _parse(r["publishTime"]))
 
     before = [r for r in covering if _parse(r["publishTime"]).date() < d1]
     if before:
         return min(before, key=lambda r: _parse(r["publishTime"]))
+
+    if on_d1:
+        return min(on_d1, key=lambda r: _parse(r["publishTime"]))
     return None
 ```
 
@@ -1391,7 +1392,7 @@ export async function getJson<T>(path: string, signal?: AbortSignal): Promise<T>
 
 `frontend/src/hooks/useApi.ts`:
 ```typescript
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { getJson } from '../api'
 
 export function useApi<T>(path: string | null) {
@@ -1399,10 +1400,17 @@ export function useApi<T>(path: string | null) {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState<boolean>(!!path)
   const [tick, setTick] = useState(0)
+  const lastPath = useRef<string | null>(null)
   const refetch = useCallback(() => setTick((t) => t + 1), [])
 
   useEffect(() => {
     if (!path) return
+    const pathChanged = lastPath.current !== path
+    lastPath.current = path
+    if (pathChanged) {
+      setError(null)
+      setLoading(true)
+    }
     const ctl = new AbortController()
     const timer = setTimeout(() => {
       setLoading(true)
@@ -1412,7 +1420,9 @@ export function useApi<T>(path: string | null) {
         .catch((e: unknown) => {
           if ((e as Error).name !== 'AbortError') setError(String((e as Error).message))
         })
-        .finally(() => setLoading(false))
+        .finally(() => {
+          if (!ctl.signal.aborted) setLoading(false)
+        })
     }, 150)
     return () => { ctl.abort(); clearTimeout(timer) }
   }, [path, tick])
@@ -1420,6 +1430,8 @@ export function useApi<T>(path: string | null) {
   return { data, error, loading, refetch }
 }
 ```
+
+(Amendments through Task 11: stale-until-fresh on path change (the plan's verbatim chip test requires the rail to stay mounted during the debounced refetch); finally gated on `!ctl.signal.aborted`.)
 
 - [ ] **Step 6: Run to verify green**
 
@@ -1605,8 +1617,6 @@ Expected: FAIL unresolved import `./AccuracyStrip`
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { DayResponse } from '../types'
 
-const hourTicks = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00', '23:59']
-
 export function MainChart({ day, selectedRev, overlayRev }: {
   day: DayResponse
   selectedRev: string | null
@@ -1630,7 +1640,7 @@ export function MainChart({ day, selectedRev, overlayRev }: {
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
           <CartesianGrid stroke="#22303e" strokeDasharray="3 3" />
-          <XAxis dataKey="t" tickFormatter={(t: string) => t.slice(11, 16)} ticks={hourTicks.map((h) => `${day.date}T${h}Z`).slice(0, -1).concat(`${day.date}T23:00:00Z`)} stroke="#8ea3c4" fontSize={11} />
+          <XAxis dataKey="t" tickFormatter={(t: string) => t.slice(11, 16)} stroke="#8ea3c4" fontSize={11} />
           <YAxis domain={[0, 'auto']} stroke="#8ea3c4" fontSize={11} width={56} />
           <Tooltip
             formatter={(v: number | string | null, name: string) =>
@@ -1647,6 +1657,7 @@ export function MainChart({ day, selectedRev, overlayRev }: {
   )
 }
 ```
+(Amendment: XAxis `ticks` omitted — recharts v3.10.1 explicit ticks cannot map these category strings at runtime; auto axis renders 12 labels every 2 h. Verified by jsdom probe.)
 
 - [ ] **Step 4: Implement AccuracyStrip**
 
@@ -1921,7 +1932,7 @@ export function ControlRail({ dates, date, onChangeDate, day, month, rev, overla
         onChange={(e) => onSelectOverlay(e.target.value || null)}>
         <option value="">none</option>
         {day.revisions
-          .filter((r) => r.publishTime !== rev)
+          .filter((r) => r.publishTime !== (rev ?? day.decision_publish_time))
           .map((r) => <option key={r.publishTime} value={r.publishTime}>{fmtTimeShort(r.publishTime)}</option>)}
       </select>
 
@@ -1968,7 +1979,7 @@ import { ErrorBanner, GapChip, Skeleton } from './States'
 
 function parseState(): { date: string | null; rev: string | null; overlayRev: string | null } {
   const p = new URLSearchParams(window.location.search)
-  return { date: p.get('date'), rev: p.get('rev'), overlayRev: p.get('rev2') }
+  return { date: p.get('date') || null, rev: p.get('rev') || null, overlayRev: p.get('rev2') || null }
 }
 
 export function AppShell() {
@@ -1988,6 +1999,9 @@ export function AppShell() {
     [activeDate, rev])
   const day = useApi<DayResponse>(dayPath)
 
+  // oxlint-disable-next-line react/set-state-in-effect -- unrecoverable deep-linked revision: reset on async fetch result, cannot be moved to an event handler
+  useEffect(() => { if (day.error && !day.data && rev !== null) setRev(null) }, [day.error, day.data, rev])
+
   useEffect(() => {
     const p = new URLSearchParams()
     if (activeDate) p.set('date', activeDate)
@@ -1996,7 +2010,11 @@ export function AppShell() {
     window.history.replaceState(null, '', `?${p.toString()}`)
   }, [activeDate, rev, overlayRev])
 
-  const onPickDay = useCallback((d: string) => { setDate(d); setRev(null) }, [])
+  const onPickDay = useCallback((d: string) => { setDate(d); setRev(null); setOverlayRev(null) }, [])
+  const onSelectRev = useCallback((r: string | null) => {
+    setRev(r)
+    if (r != null && r === overlayRev) setOverlayRev(null)
+  }, [overlayRev])
   const selectedRev = rev ?? day.data?.decision_publish_time ?? null
 
   return (
@@ -2007,6 +2025,7 @@ export function AppShell() {
       </header>
 
       {calendar.error && <ErrorBanner message={`calendar: ${calendar.error}`} onRetry={calendar.refetch} />}
+      {month.error && <ErrorBanner message={`month: ${month.error}`} onRetry={month.refetch} />}
 
       <div className="shell-body">
         {day.data && activeDate && (
@@ -2018,14 +2037,14 @@ export function AppShell() {
             month={month.data}
             rev={rev}
             overlayRev={overlayRev}
-            onSelectRev={setRev}
+            onSelectRev={onSelectRev}
             onSelectOverlay={setOverlayRev} />
         )}
         <main>
           {day.error && <ErrorBanner message={`day: ${day.error}`} onRetry={day.refetch} />}
           {(day.loading || !day.data) && !day.error && <Skeleton />}
-          {day.data && day.data.gap_flag !== '' && <GapChip flag={day.data.gap_flag} />}
-          {day.data && day.data.gap_flag !== 'no_decision_forecast' && (
+          {day.data && !day.loading && day.data.gap_flag !== '' && <GapChip flag={day.data.gap_flag} />}
+          {day.data && !day.loading && day.data.gap_flag !== 'no_decision_forecast' && (
             <>
               <h3 className="day-title">{activeDate}</h3>
               <KpiStrip metrics={day.data.metrics} title="DAY" />
@@ -2043,6 +2062,10 @@ export function AppShell() {
   )
 }
 ```
+
+(Amendments: overlay dropdown excludes the EFFECTIVE revision (`rev ?? decision_publish_time`); picking a day also resets the overlay selection.)
+(Amendment: panel contents render only when `!day.loading` — avoids a ≤250 ms stale-KPI flash while keeping the rail mounted during refetch.)
+(Amendments: URL params normalize empty strings to null; a rejected deep-linked revision auto-resets to auto (unrecoverable-state fix); picking the overlay value as the main revision clears the overlay; a month feed failure shows its own banner. Panel contents gated on !day.loading.)
 
 Replace `frontend/src/App.tsx`:
 ```tsx
@@ -2168,7 +2191,7 @@ main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; 
 ```bash
 cd frontend && npm test && npm run lint && npm run build
 ```
-Expected: 9 passed (2 hook + 2 kpi + 2 accstrip + 3 appshell). Fix test races until green.
+Expected: 18 passed (4 hook + 4 kpi + 1 format + 1 mainchart + 4 accstrip + 4 appshell). Fix test races until green.
 
 - [ ] **Step 8: Commit**
 
@@ -2235,14 +2258,24 @@ def default_seed_http_get(seed_dir: str | Path) -> Callable[[str, dict], list]:
     """Clause for offline deployments: reads the seed CSVs instead of hitting BMRS."""
     seed = Path(seed_dir)
 
-    def http_get(kind: str, _params: dict) -> list:
+    def http_get(kind: str, params: dict) -> list:
         name = "fuelhh_wind_jan2026.csv" if kind == "fuelhh" else "windfor_jan2026.csv"
-        import csv
         with (seed / name).open(newline="", encoding="utf-8") as f:
-            return [dict(row) for row in csv.DictReader(f)]
+            rows = [dict(r) for r in csv.DictReader(f)]
+        if kind == "fuelhh":
+            rows = [r for r in rows
+                    if (params.get("settlementDateFrom") is None or r["settlementDate"] >= params["settlementDateFrom"])
+                    and (params.get("settlementDateTo") is None or r["settlementDate"] <= params["settlementDateTo"])]
+        else:
+            rows = [r for r in rows
+                    if (params.get("publishDateTimeFrom") is None or r["publishTime"] >= params["publishDateTimeFrom"])
+                    and (params.get("publishDateTimeTo") is None or r["publishTime"] <= params["publishDateTimeTo"])]
+        return rows
 
     return http_get
 ```
+
+(Amendment: the seed loader honors the caller's date/publish windows — no full-CSV amplification — and `csv` is imported at module top.)
 
 (Place `import csv` at the top of the module instead of inside the closure — cleaner:)
 
@@ -2266,7 +2299,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.etl.ingest import IngestConfig, default_seed_http_get, run_ingest
+from app.etl.ingest import BASE, IngestConfig, _retry_fetch, default_seed_http_get, run_ingest
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -2278,18 +2311,26 @@ def main() -> None:
     args = ap.parse_args()
 
     cfg = IngestConfig(db_path=Path(args.db))
+    if args.source == "api":
+        probe = _retry_fetch(f"{BASE}/datasets/FUELHH/stream",
+                             {"settlementDateFrom": "2026-01-01",
+                              "settlementDateTo": "2026-01-01"}, cfg)
+        if not probe:
+            raise SystemExit("BMRS unreachable — use --source seed for offline build")
     if args.source == "seed":
         cfg.http_get = default_seed_http_get(ROOT / "data" / "seed")
 
     summary = run_ingest(cfg)
     print(summary)
-    assert summary["days_with_decision"] >= 28, \
-        f"expected >=28 scored January days, got {summary['days_with_decision']}"
+    if summary["days_with_decision"] < 28:
+        raise SystemExit(f"expected >=28 scored January days, got {summary['days_with_decision']}")
 
 
 if __name__ == "__main__":
     main()
 ```
+
+(Amendment: a one-call BMRS reachability probe fails fast before the ~1h offline crawl; the ≥28-days gate raises SystemExit instead of assert so it survives `python -O`.)
 
 - [ ] **Step 6: Build the real database (live API first, ~3 min)**
 
@@ -2425,16 +2466,18 @@ from app.etl.ingest import IngestConfig, default_seed_http_get, run_ingest
 
 def main() -> None:
     cfg = IngestConfig(
-        db_path=Path("/srv/data/app.db"),
+        db_path=Path("/srv/baked/app.db"),
         http_get=default_seed_http_get("/srv/db_seed"),
     )
     summary = run_ingest(cfg)
     print(summary)
-    assert summary["days_with_decision"] >= 28, "seed bake: too few covering january days"
+    if summary["days_with_decision"] < 28:
+        raise SystemExit("seed bake: too few covering january days")
 
 
 if __name__ == "__main__":
     main()
+
 ```
 
 Final `backend/Dockerfile` (replaces Task 7 file):
@@ -2448,9 +2491,11 @@ COPY app ./app
 COPY scripts ./scripts
 COPY db_seed ./db_seed
 ENV DB_PATH=/srv/data/app.db
-RUN mkdir -p /srv/data && python scripts/build_db_docker.py
-CMD ["sh", "-c", "uvicorn app.api.main:create_app --factory --host 0.0.0.0 --port ${PORT:-8000}"]
+RUN mkdir -p /srv/baked /srv/data && python scripts/build_db_docker.py
+CMD ["sh", "-c", "mkdir -p $(dirname ${DB_PATH}) && { test -f ${DB_PATH} || cp /srv/baked/app.db ${DB_PATH}; } && uvicorn app.api.main:create_app --factory --host 0.0.0.0 --port ${PORT:-8000}"]
 ```
+
+(Amendment: db is baked to `/srv/baked/app.db` and the CMD copies it to `${DB_PATH}` when absent — the compose `./data` mount must not shadow the baked db on fresh clones.)
 
 `backend/.dockerignore` (remove the `scripts/` line — scripts must bake):
 ```
@@ -2459,6 +2504,7 @@ tests/
 .pytest_cache/
 __pycache__/
 README.md
+
 ```
 
 Rebuild to prove the bake works:
@@ -2474,6 +2520,7 @@ Expected: printed summary with `days_with_decision` ≥ 28.
 {
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
+
 ```
 
 - [ ] **Step 3: Push repo and deploy Render + Vercel (manual, ~15 min)**
@@ -2501,10 +2548,10 @@ generation forecast for each January 2026 delivery day, and **quantify its accur
 (MAE / RMSE / MAPE / Bias) against Elexon BMRS actuals — the two numbers a day-ahead
 trading desk must reason with.
 
-**AI tools disclosure:** built with assistance from AI coding tools (opencode agent,
-GLM/Claude-class models) for code generation, planning, and test scaffolding. Domain
-rules (§ decision-revision rule), product design, and deployment choices were
-human-directed and are documented in `docs/`.
+**AI tools disclosure:** built with assistance from an AI coding agent (opencode CLI,
+GLM-class models) used for planning, code generation, and test scaffolding. Domain rules
+(the decision-revision rule), product design, and deployment choices were human-directed
+and are documented in `docs/`.
 
 ## Project structure
     project.md                    challenge brief
@@ -2517,21 +2564,21 @@ human-directed and are documented in `docs/`.
       app/etl/align.py            30-min → hourly actual alignment
       app/etl/metrics.py          MAE / RMSE / MAPE / Bias (+ floor rule)
       app/etl/decision.py         decision-revision selection (13:00 UTC cutoff rule)
-      app/etl/ingest.py           chunked Elexon ingest + SQLite writes
-      app/etl/seed loader         default_seed_http_get (offline deploy path)
+      app/etl/ingest.py           chunked Elexon ingest + SQLite writes (+ seed CSV loader)
       scripts/                    generate_seed.py · build_db.py · build_db_docker.py
-      tests/                      pytest suite (28 tests)
+      db_seed/                    committed copies of the seed CSVs (baked at image build)
+      tests/                      pytest suite (36 tests)
       Dockerfile                  python:3.12-slim, bakes app.db from seed CSVs
     frontend/
-      src/                        React 18 + TS: AppShell, ControlRail, MainChart,
-                                  KpiStrip, AccuracyStrip, States, api client, tests
+      src/                        React 19 + TS: AppShell, ControlRail, MainChart,
+                                  KpiStrip, AccuracyStrip, States, api client (18 vitest tests)
       Dockerfile                  node build → nginx serve (compose parity)
       vercel.json                 SPA rewrites
     docker-compose.yml            backend + frontend, local parity stack
 
 ## How to run (local docker)
     docker compose up --build -d
-    # UI:   http://localhost:8080   (nginx serves React, proxies /api)
+    # UI:   http://localhost:8080   (nginx serves React; browser fetches the API on :8000)
     # API:  http://localhost:8000/api/health
 
 ## How to run (dev)
@@ -2539,34 +2586,42 @@ Backend (Windows):
     cd backend
     python -m venv venv
     venv\Scripts\pip install -r requirements.txt -r requirements-dev.txt
-    venv\Scripts\pytest                       # full test suite
-    venv\Scripts\python scripts\build_db.py   # rebuild data/app.db (uses seed if API flaky: --source seed)
+    venv\Scripts\pytest                       # full test suite (36)
+    venv\Scripts\python scripts\build_db.py   # rebuild data/app.db (--source seed for offline)
     venv\Scripts\uvicorn app.api.main:create_app --factory --port 8000
 Frontend:
     cd frontend
     npm install
     npm run dev        # http://localhost:5173 (VITE_API_BASE defaults to :8000)
-    npm test / npm run build / npm run lint
+    npm test           # 18 tests
+    npm run build / npm run lint
 
 ## Data rules (the important ones)
-- Actuals: Elexon **FUELHH** (`fuelType=WIND`), 30-min rows, deduped to latest `publishTime`
-  per `startTime`; hourly actual = mean of the two half-hours.
-- Forecasts: Elexon **WINDFOR** hourly revisions; ALL January revisions ingested.
+- Actuals: Elexon **FUELHH** (`fuelType=WIND`), 30-min rows, deduped to the latest
+  `publishTime` per `startTime`; the hourly actual is the mean of its two half-hours.
+- Forecasts: Elexon **WINDFOR** hourly revisions; all January revisions ingested.
 - **Decision revision** = latest revision published on D-1 with `publishTime ≤ 13:00 UTC`
-  whose `startTime` coverage spans the full delivery day; fallback chain (earliest covering
-  on D-1 → earliest covering ≤ D-2 → flagged gap) in `app/etl/decision.py`.
-- MAPE/RMSE/MAE/Bias computed over hours where actual ≥ 1 MW; `n_hours` carries the count.
-- Month aggregate: hour-weighted mean of daily MAE/RMSE/MAPE/Bias.
+  whose covered `startTime`s span the full delivery day; fallback chain (earliest covering
+  publish < D-1 — the in-force view → earliest covering publish on D-1 after the gate →
+  flagged gap) lives in `app/etl/decision.py`.
+- MAPE/RMSE/MAE/Bias are computed over hours where actual ≥ 1 MW; `n_hours` carries the count.
+- Month aggregate is the hour-weighted mean of the daily values. **Note:** the month RMSE
+  is an approximation (hour-weighted mean of daily RMSEs), not the exact month-long RMSE
+  recomputed from hourly residuals.
 
 ## API
-    GET /api/health                      → {status, ingested_at, day_count}
-    GET /api/calendar                    → per-day meta (picker + heatmap)
+    GET /api/health                       → {status, ingested_at, day_count}
+    GET /api/calendar                     → per-day meta (picker + heatmap)
     GET /api/day/{YYYY-MM-DD}?revision=&overlay=  → full payload incl. ALL revisions
-    GET /api/month                       → month aggregate + per-day rows
+    GET /api/month                        → month aggregate + per-day rows
 
 ## Live deployment
-    UI:  https://<vercel>.vercel.app            ← verify in incognito
+    UI:  https://<vercel>.vercel.app           (set VITE_API_BASE at build; SPA rewrites)
     API: https://<render-host>.onrender.com/api/health   (Render free cold start ≈ 50 s)
+
+Deploy placement: backend = Render Web Service (root `backend`, Docker runtime, health
+check `/api/health`, env `ALLOWED_ORIGINS=https://<vercel>.vercel.app`); frontend = Vercel
+(root `frontend`, env `VITE_API_BASE=https://<render-host>.onrender.com`).
 ````
 
 - [ ] **Step 5: Video outlines**
@@ -2580,8 +2635,9 @@ Frontend:
      the market told you the morning you bid."
 1:15 Precision: overlay 22:30 revision vs decision — "look how confident maidens got
      closer to the day." Hourly error bars show over/under buying hour by hour.
-2:30 Trust: MAPE calendar — the month's worst days light up; click into 14 Jan.
-     KPI cards quantify: monthly MAE ≈ 1.3 GW MAPE ≈ 20%.
+2:30 Trust: MAPE calendar — the month's worst days light up (08 Jan tops it at 54.1%;
+     click into 28 Jan, the runner-up heat cell at 52.6%). KPI cards quantify:
+     monthly MAE ≈ 2.0 GW, MAPE ≈ 20%.
 3:45 Confidence: seeded data, validated coverage, every figure reproducible from
      BMRS alone; deep links (?date=…) put any day two clicks away.
 4:30 Close: bulletin-quick — "the portal turns forecast error into an operating number."
@@ -2595,12 +2651,12 @@ Frontend:
      React (Vercel); JSON contract in docs.
 0:45 Ingest: chunked day/window requests (31 + 62), retry/backoff on 429,
      dedupe latest publishTime, committed seed CSVs = offline parity.
-1:30 Decision rule: backend/app/etl/decision.py walkthrough + 6 tests covering
+1:30 Decision rule: backend/app/etl/decision.py walkthrough + 7 tests covering
      the 13:00 cutoff, late-open hour coverage, fallback chain, Jan-1 edge.
 2:15 Metrics: floor rule and hand-computed golden test (test_metrics).
-2:45 API: 4 endpoints, CORS pinned, TestClient suite (10 tests), all-revisions
+2:45 API: 4 endpoints, CORS pinned, TestClient suite (12 tests), all-revisions
      response design → instantaneous scrubbing in UI.
-3:30 Frontend: URL-state deep links, AppShell composition, 9 vitest tests,
+3:30 Frontend: URL-state deep links, AppShell composition, 18 vitest tests,
      skeleton + error and gap states, responsive rail.
 4:15 Practices: TDD commit history, Docker parity local↔Render, plan+spec in docs,
      README AI-tool disclosure.
@@ -2613,11 +2669,13 @@ cd backend && venv\Scripts\pytest
 cd ..\frontend && npm test && npm run lint && npm run build
 git add -A && git commit -m "docs: readme + video outlines; chore: final config"
 ```
-Expected: backend 29 passed (28 incl. seed test) · frontend 9 passed · build green.
+Expected: backend 36 passed · frontend 18 passed · lint + build green.
 
 - [ ] **Step 7: Submission hygiene (brief §3.3)**
 
 Open in incognito: Vercel URL loads with chart (allow 50 s first-hit) · Render health JSON readable · GitHub repo public & viewable · README links verified. Fill the submission form with all four URLs.
+
+(Step 3 deploy + Step 7 submission form: performed in person after the branch merge — not automated in this session.)
 
 ---
 

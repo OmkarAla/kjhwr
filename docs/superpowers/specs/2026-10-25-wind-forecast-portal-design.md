@@ -46,7 +46,7 @@ For delivery day **D**:
 
 1. Candidates = revisions published on **D-1** (UK calendar date, times in `Z`) whose `startTime` range **covers all 24 h of D** (00:00 inclusive → next day 00:00 exclusive).
 2. Decision revision = **latest candidate with publishTime ≤ 13:00 UTC** (January UK = GMT = UTC; no DST in the window). Rationale: the day-ahead auction gate ≈11:00 and results midday; a 13:00 cutoff includes the ~11:30/12:30 pre-afternoon publishes but excludes evening near-real-time fixes (e.g. 22:30), which would leak information not available at real decision time.
-3. Fallbacks, in order: earliest covering revision on D-1 regardless of cutoff → earliest covering revision on any date (≥D-2) → `no_decision_forecast` gap flag (never a silent blank).
+3. Fallbacks, in order: earliest covering revision published **before D-1** (the view already in force at decision time) → earliest covering on **D-1 after 13:00 UTC** (nothing was in force before the gate — the "all hands on deck" number) → `no_decision_forecast` gap flag (never a silent blank). Prefer an earlier in-force view over a post-gate D-1 publish: the latter was not available when the decision was made.
 4. Revision scrubber lists **all revisions D-1 00:00 → D 24:00** for that delivery day; decision revision is default-highlighted "auto"; others labelled as time-ahead of delivery start.
 
 ## 5. SQLite schema

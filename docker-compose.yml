@@ -1,0 +1,15 @@
+services:
+  backend:
+    build: ./backend
+    ports: ["8000:8000"]
+    environment:
+      - DB_PATH=/srv/data/app.db
+      - ALLOWED_ORIGINS=http://localhost:5173,http://localhost:4173,http://localhost:8080
+    volumes:
+      - ./data:/srv/data
+
+  frontend:
+    build: ./frontend
+    ports: ["8080:80"]
+    depends_on:
+      - backend
