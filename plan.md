@@ -2188,6 +2188,8 @@ main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; 
 @media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
 ```
 
+(Amendment: overall light-theme restyle for presentation. Tokens now page `#f4f6fa`, white panels, `#e2e8f0` borders, `#1e293b` text, `#64748b` muted, teal accent `#0e7490` / blue `#0284c7`; cards get 12px radius + soft shadow, selects/chips restyled, `:focus-visible` rings added. Hardcoded chart colors moved to light-safe values in `MainChart` (grid `#e2e8f0`, axes `#64748b`, white tooltip, actual `#d97706`, forecast `#0284c7`, overlay `#6366f1`); heatmap palette in `AccuracyStrip` changed to light blues `#eff6ff → #1e3a8a` with null cells `#eef2f7` and inverted ink (white on dark buckets). AccStrip test updated for the new null-cell background plus ink assertions.)
+
 - [ ] **Step 7: Run to verify green + lint + build**
 
 ```bash

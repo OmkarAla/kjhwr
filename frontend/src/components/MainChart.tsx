@@ -23,19 +23,19 @@ export function MainChart({ day, selectedRev, overlayRev }: {
       <h4>HOURLY WIND GENERATION · MW</h4>
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
-          <CartesianGrid stroke="#22303e" strokeDasharray="3 3" />
-          <XAxis dataKey="t" tickFormatter={(t: string) => t.slice(11, 16)} stroke="#8ea3c4" fontSize={11} />
-          <YAxis domain={[0, 'auto']} stroke="#8ea3c4" fontSize={11} width={56} />
+          <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
+          <XAxis dataKey="t" tickFormatter={(t: string) => t.slice(11, 16)} stroke="#64748b" fontSize={11} />
+          <YAxis domain={[0, 'auto']} stroke="#64748b" fontSize={11} width={56} />
           <Tooltip
             formatter={(v, name) =>
               v == null ? ['—', name ?? ''] : [`${Math.round(Number(v)).toLocaleString('en-GB')} MW`, name ?? '']
             }
-            contentStyle={{ background: '#101a30', border: '1px solid #223255', color: '#c8d3e8' }}
+            contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', color: '#1e293b', boxShadow: '0 4px 12px rgba(15, 23, 42, .12)' }}
           />
-          <Legend wrapperStyle={{ color: '#8ea3c4', fontSize: 11 }} />
-          <Line name="Actual" dataKey="actual" stroke="#f59e0b" strokeWidth={2} dot={false} />
-          <Line name="Decision forecast" dataKey="forecast" stroke="#22d3ee" strokeWidth={2.6} dot={false} connectNulls />
-          {ov && <Line name="Overlay revision" dataKey="overlay" stroke="#a5b4fc" strokeWidth={1.6} strokeDasharray="5 4" dot={false} connectNulls />}
+          <Legend wrapperStyle={{ color: '#64748b', fontSize: 11 }} />
+          <Line name="Actual" dataKey="actual" stroke="#d97706" strokeWidth={2} dot={false} />
+          <Line name="Decision forecast" dataKey="forecast" stroke="#0284c7" strokeWidth={2.6} dot={false} connectNulls />
+          {ov && <Line name="Overlay revision" dataKey="overlay" stroke="#6366f1" strokeWidth={1.6} strokeDasharray="5 4" dot={false} connectNulls />}
         </LineChart>
       </ResponsiveContainer>
     </section>

@@ -34,6 +34,8 @@ describe('AccuracyStrip', () => {
     const cell = screen.getByTitle('2026-01-27 · MAPE 23.0%')
     expect(cell).toHaveTextContent('27')
     expect(cell).toHaveTextContent('23.0')
+    expect(screen.getByTitle('2026-01-31 · MAPE 25.0%').style.color).toBe('rgb(255, 255, 255)')
+    expect(screen.getByTitle('2026-01-01 · MAPE 10.0%').style.color).toBe('rgb(15, 23, 42)')
   })
 
   it('labels the panel and explains MAPE', () => {
@@ -66,6 +68,6 @@ describe('AccuracyStrip', () => {
         selectedDate="2026-01-02"
       />,
     )
-    expect(screen.getByTitle('2026-01-02 · MAPE —%').style.background).toContain('rgb(20, 29, 51)')
+    expect(screen.getByTitle('2026-01-02 · MAPE —%').style.background).toContain('rgb(238, 242, 247)')
   })
 })

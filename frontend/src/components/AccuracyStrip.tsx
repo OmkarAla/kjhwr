@@ -2,7 +2,7 @@ import type { HourPoint } from '../types'
 
 const hh = (t: string) => t.slice(11, 16)
 
-const HEAT = ['#06283e', '#0c4a6e', '#0e7490', '#0891b2', '#22d3ee', '#67e8f9']
+const HEAT = ['#eff6ff', '#dbeafe', '#bfdbfe', '#93c5fd', '#2563eb', '#1e3a8a']
 
 function heatIndex(mape: number | null, max: number): number | null {
   if (mape == null) return null
@@ -10,9 +10,12 @@ function heatIndex(mape: number | null, max: number): number | null {
   return Math.min(HEAT.length - 1, Math.floor(f * HEAT.length))
 }
 
-const heatColor = (idx: number | null): string => (idx == null ? '#141d33' : HEAT[idx])
+const heatColor = (idx: number | null): string => (idx == null ? '#eef2f7' : HEAT[idx])
 
-const inkColor = (idx: number | null): string => (idx != null && idx >= 4 ? '#04141d' : '#dbeafe')
+const inkColor = (idx: number | null): string => {
+  if (idx == null) return '#64748b'
+  return idx >= 4 ? '#ffffff' : '#0f172a'
+}
 
 export interface DayAccuracyRow { date: string; mape: number | null }
 
