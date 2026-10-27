@@ -2,7 +2,7 @@ import type { HourPoint } from '../types'
 
 const hh = (t: string) => t.slice(11, 16)
 
-const HEAT = ['#eff6ff', '#dbeafe', '#bfdbfe', '#93c5fd', '#2563eb', '#1e3a8a']
+const HEAT = ['#eef6f4', '#d7ebe7', '#b3d9d2', '#7fbfb5', '#2f8f82', '#0b4f4a']
 
 function heatIndex(mape: number | null, max: number): number | null {
   if (mape == null) return null
@@ -10,11 +10,11 @@ function heatIndex(mape: number | null, max: number): number | null {
   return Math.min(HEAT.length - 1, Math.floor(f * HEAT.length))
 }
 
-const heatColor = (idx: number | null): string => (idx == null ? '#eef2f7' : HEAT[idx])
+const heatColor = (idx: number | null): string => (idx == null ? '#f0ede8' : HEAT[idx])
 
 const inkColor = (idx: number | null): string => {
-  if (idx == null) return '#64748b'
-  return idx >= 4 ? '#ffffff' : '#0f172a'
+  if (idx == null) return '#78716c'
+  return idx >= 4 ? '#ffffff' : '#1c1917'
 }
 
 export interface DayAccuracyRow { date: string; mape: number | null }
@@ -38,14 +38,14 @@ export function AccuracyStrip({ hourly, dates, selectedDate, onPickDay }: {
               return <div key={h.t} className="err-gap" title={`${hh(h.t)} · no forecast`} />
             }
             const over = h.err > 0
-            const hpx = Math.max(2, Math.round((Math.abs(h.err) / maxAbs) * 56))
+            const hpx = Math.max(2, (Math.abs(h.err) / maxAbs) * 100)
             const pct = h.pct_err == null ? null : `${h.err > 0 ? '+' : '-'}${Math.abs(h.pct_err).toFixed(1)}%`
             const sign = h.err > 0 ? '+' : '-'
             return (
               <div key={h.t}
                 title={`${hh(h.t)} · forecast−actual: ${sign}${Math.abs(h.err).toFixed(0)} MW (${pct ?? '—'})`}
                 className={over ? 'err-over' : 'err-under'}
-                style={{ height: `${hpx}px`, width: '7px' }} />
+                style={{ height: `${hpx}%` }} />
             )
           })}
         </div>
@@ -69,6 +69,11 @@ export function AccuracyStrip({ hourly, dates, selectedDate, onPickDay }: {
               </button>
             )
           })}
+        </div>
+        <div className="heat-scale">
+          <span>lower error</span>
+          <span className="heat-ramp" aria-hidden="true" />
+          <span>higher error</span>
         </div>
         <div className="heat-note">each square = one delivery day · MAPE = mean absolute percentage error · click to open</div>
       </section>

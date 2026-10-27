@@ -20,12 +20,17 @@ describe('KpiStrip', () => {
     expect(screen.getAllByText('—')).toHaveLength(4)
   })
 
-  it('warns when bias is positive', () => {
+  it('marks a positive bias as over-forecast (class)', () => {
     render(
       <KpiStrip metrics={{ mae: 1, rmse: 1, mape: 1, bias: 300, n_hours: 24 }} title="DAY" />,
     )
     const card = screen.getByTestId('kpi-bias').closest('.kpi-card')
-    expect(card?.className).toContain('kpi-warn')
+    expect(card?.className).toContain('kpi-over')
+  })
+
+  it('marks a positive bias as over-forecast', () => {
+    render(<KpiStrip metrics={{ mae: 1, rmse: 1, mape: 1, bias: 300, n_hours: 24 }} title="DAY" />)
+    expect(screen.getByText('over')).toBeInTheDocument()
   })
 
   it('does not warn on negative bias', () => {
@@ -33,6 +38,6 @@ describe('KpiStrip', () => {
       <KpiStrip metrics={{ mae: 1, rmse: 1, mape: 1, bias: -411, n_hours: 24 }} title="DAY" />,
     )
     const card = screen.getByTestId('kpi-bias').closest('.kpi-card')
-    expect(card?.className).not.toContain('kpi-warn')
+    expect(card?.className).not.toContain('kpi-over')
   })
 })
