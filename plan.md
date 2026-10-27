@@ -1729,6 +1729,8 @@ export function AccuracyStrip({ hourly, dates, selectedDate, onPickDay }: {
 }
 ```
 
+(Amendment: customer-facing clarity — the heatmap is no longer color-only. Each cell renders the day-of-month (`.cell-day`) and its MAPE value (`.cell-mape`) with adaptive ink on bright buckets; heading renamed `DAILY FORECAST ERROR · MAPE (%)` and the note spells out "MAPE = mean absolute percentage error". Tests: day/value text + panel label assertions added. Deviation from the reference code above, which rendered empty cells with hover-only values.)
+
 - [ ] **Step 5: Run to verify green**
 
 ```bash

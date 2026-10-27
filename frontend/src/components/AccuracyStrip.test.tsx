@@ -29,6 +29,19 @@ describe('AccuracyStrip', () => {
     expect(onPick).toHaveBeenCalledWith('2026-01-27')
   })
 
+  it('shows day-of-month and MAPE value in each cell', () => {
+    render(<AccuracyStrip hourly={hourly} dates={days} onPickDay={() => {}} selectedDate="2026-01-02" />)
+    const cell = screen.getByTitle('2026-01-27 · MAPE 23.0%')
+    expect(cell).toHaveTextContent('27')
+    expect(cell).toHaveTextContent('23.0')
+  })
+
+  it('labels the panel and explains MAPE', () => {
+    render(<AccuracyStrip hourly={hourly} dates={days} onPickDay={() => {}} selectedDate="2026-01-02" />)
+    expect(screen.getByText(/DAILY FORECAST ERROR · MAPE \(%\)/)).toBeInTheDocument()
+    expect(screen.getByText(/mean absolute percentage error/i)).toBeInTheDocument()
+  })
+
   it('renders gap markers for hours without error', () => {
     const hourlyWithGap: HourPoint[] = [
       { t: '2026-01-02T00:00:00Z', forecast: null, actual: 3000, err: null, abs_err: null, pct_err: null },

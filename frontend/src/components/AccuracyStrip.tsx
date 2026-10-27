@@ -4,11 +4,15 @@ const hh = (t: string) => t.slice(11, 16)
 
 const HEAT = ['#06283e', '#0c4a6e', '#0e7490', '#0891b2', '#22d3ee', '#67e8f9']
 
-function heatColor(mape: number | null, max: number): string {
-  if (mape == null) return '#141d33'
+function heatIndex(mape: number | null, max: number): number | null {
+  if (mape == null) return null
   const f = Math.min(1, Math.max(0, mape) / Math.max(max, 1e-6))
-  return HEAT[Math.min(HEAT.length - 1, Math.floor(f * HEAT.length))]
+  return Math.min(HEAT.length - 1, Math.floor(f * HEAT.length))
 }
+
+const heatColor = (idx: number | null): string => (idx == null ? '#141d33' : HEAT[idx])
+
+const inkColor = (idx: number | null): string => (idx != null && idx >= 4 ? '#04141d' : '#dbeafe')
 
 export interface DayAccuracyRow { date: string; mape: number | null }
 
@@ -46,18 +50,24 @@ export function AccuracyStrip({ hourly, dates, selectedDate, onPickDay }: {
       </section>
 
       <section className="panel" aria-label="day mape calendar">
-        <h4>JANUARY DAY-MAPE CALENDAR</h4>
+        <h4>DAILY FORECAST ERROR · MAPE (%)</h4>
         <div className="heatmap">
-          {dates.map((d) => (
-            <button key={d.date}
-              title={`${d.date} · MAPE ${d.mape == null ? '—' : d.mape.toFixed(1)}%`}
-              aria-label={`Day ${d.date} MAPE ${d.mape == null ? 'unknown' : d.mape.toFixed(1)} percent`}
-              className={`cell ${d.date === selectedDate ? 'cell-sel' : ''}`}
-              style={{ background: heatColor(d.mape, maxMape) }}
-              onClick={() => onPickDay(d.date)} />
-          ))}
+          {dates.map((d) => {
+            const idx = heatIndex(d.mape, maxMape)
+            return (
+              <button key={d.date}
+                title={`${d.date} · MAPE ${d.mape == null ? '—' : d.mape.toFixed(1)}%`}
+                aria-label={`Day ${d.date} MAPE ${d.mape == null ? 'unknown' : d.mape.toFixed(1)} percent`}
+                className={`cell ${d.date === selectedDate ? 'cell-sel' : ''}`}
+                style={{ background: heatColor(idx), color: inkColor(idx) }}
+                onClick={() => onPickDay(d.date)}>
+                <span className="cell-day">{Number(d.date.slice(8, 10))}</span>
+                <span className="cell-mape">{d.mape == null ? '—' : d.mape.toFixed(1)}</span>
+              </button>
+            )
+          })}
         </div>
-        <div className="heat-note">hover = exact MAPE · click = open day</div>
+        <div className="heat-note">each square = one delivery day · MAPE = mean absolute percentage error · click to open</div>
       </section>
     </div>
   )
