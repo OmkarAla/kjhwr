@@ -1966,6 +1966,8 @@ export function ControlRail({ dates, date, onChangeDate, day, month, rev, overla
 }
 ```
 
+(Amendment: revision chips grouped by publish date to fix the cramped, ambiguous 32-chip wall. Each group is labelled with lead time + issue date (`D-2 · 3 Jan`, … `D+1 · 6 Jan`) and lays out its 8 times in a 4×2 grid; the "auto" chip sits below. Manual selections now read `07:30 · D+1` in the decision line. Grouping helpers `leadLabel`/`fmtDayMonth`/`groupByPublishDate` live in `ControlRail.tsx`; `role="listbox"/"group"/"option"` semantics preserved. Tests: group label + lead-suffixed selection added.)
+
 - [ ] **Step 5: Implement AppShell + entry files**
 
 `frontend/src/components/AppShell.tsx`:

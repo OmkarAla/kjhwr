@@ -49,6 +49,7 @@ describe('AppShell', () => {
     expect(screen.getByTestId('kpi-mae')).toHaveTextContent('200.0 MW')
     const list = screen.getByRole('listbox', { name: 'revisions' })
     expect(within(list).getAllByRole('option').length).toBe(3)
+    expect(screen.getByText('D-1 · 1 Jan')).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: /MAPE/ }).length).toBe(2)
   })
 
@@ -57,7 +58,7 @@ describe('AppShell', () => {
     render(<AppShell />)
     const list = await screen.findByRole('listbox', { name: 'revisions' })
     await user.click(within(list).getByRole('option', { name: '22:30' }))
-    expect(screen.getByTestId('selected-rev')).toHaveTextContent('22:30')
+    expect(screen.getByTestId('selected-rev')).toHaveTextContent('22:30 · D-1')
   })
 
   it('heatmap click switches delivery day', async () => {

@@ -1,6 +1,31 @@
 import type { DayResponse, DayRow, MonthResponse } from '../types'
 import { fmtDate, fmtNum, fmtPercent, fmtTimeShort } from '../lib/format'
 
+const DAY_MS = 86_400_000
+
+function leadLabel(publishDate: string, deliveryDate: string): string {
+  const days = Math.round(
+    (Date.parse(`${deliveryDate}T00:00:00Z`) - Date.parse(`${publishDate}T00:00:00Z`)) / DAY_MS,
+  )
+  return days === 0 ? 'D' : days > 0 ? `D-${days}` : `D+${-days}`
+}
+
+function fmtDayMonth(date: string): string {
+  return new Date(`${date}T00:00:00Z`).toLocaleString('en-GB', {
+    timeZone: 'UTC', day: 'numeric', month: 'short',
+  })
+}
+
+function groupByPublishDate(revisions: DayResponse['revisions']) {
+  return revisions.reduce<{ date: string; revs: DayResponse['revisions'] }[]>((groups, rev) => {
+    const date = rev.publishTime.slice(0, 10)
+    const group = groups.find((g) => g.date === date)
+    if (group) group.revs.push(rev)
+    else groups.push({ date, revs: [rev] })
+    return groups
+  }, [])
+}
+
 export function ControlRail({ dates, date, onChangeDate, day, month, rev, overlayRev,
   onSelectRev, onSelectOverlay }: {
   dates: DayRow[]
@@ -14,6 +39,8 @@ export function ControlRail({ dates, date, onChangeDate, day, month, rev, overla
   onSelectOverlay: (r: string | null) => void
 }) {
   const isAuto = rev == null || rev === day.decision_publish_time
+  const selected = day.revisions.find((r) => r.publishTime === rev)
+  const selectedLead = selected ? leadLabel(selected.publishTime.slice(0, 10), day.date) : null
 
   return (
     <aside className="rail">
@@ -30,20 +57,32 @@ export function ControlRail({ dates, date, onChangeDate, day, month, rev, overla
 
       <div className="rail-label">DECISION REVISION</div>
       <div data-testid="selected-rev" className="rail-decision">
-        {isAuto ? `${fmtTimeShort(day.decision_publish_time)} · D-1 ● auto` : fmtTimeShort(rev)}
+        {isAuto
+          ? `${fmtTimeShort(day.decision_publish_time)} · D-1 ● auto`
+          : `${fmtTimeShort(rev)}${selectedLead ? ` · ${selectedLead}` : ''}`}
       </div>
-      <div className="chips" role="listbox" aria-label="revisions">
-        {day.revisions.map((r) => {
-          const isDecision = r.publishTime === day.decision_publish_time
-          return (
-            <button key={r.publishTime} type="button" role="option"
-              aria-selected={r.publishTime === rev}
-              className={`chip ${r.publishTime === rev ? 'chip-on' : ''} ${isDecision ? 'chip-decision' : ''}`}
-              onClick={() => onSelectRev(r.publishTime)}>
-              {fmtTimeShort(r.publishTime)}{isDecision ? ' ●' : ''}
-            </button>
-          )
-        })}
+      <div className="rev-groups" role="listbox" aria-label="revisions">
+        {groupByPublishDate(day.revisions).map((group) => (
+          <div key={group.date} className="rev-group" role="group"
+            aria-label={`${leadLabel(group.date, day.date)} ${fmtDayMonth(group.date)}`}>
+            <div className="rev-group-label">
+              {leadLabel(group.date, day.date)} · {fmtDayMonth(group.date)}
+            </div>
+            <div className="chips">
+              {group.revs.map((r) => {
+                const isDecision = r.publishTime === day.decision_publish_time
+                return (
+                  <button key={r.publishTime} type="button" role="option"
+                    aria-selected={r.publishTime === rev}
+                    className={`chip ${r.publishTime === rev ? 'chip-on' : ''} ${isDecision ? 'chip-decision' : ''}`}
+                    onClick={() => onSelectRev(r.publishTime)}>
+                    {fmtTimeShort(r.publishTime)}{isDecision ? ' ●' : ''}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
         <button type="button" role="option" aria-selected={isAuto}
           className={`chip chip-auto ${isAuto ? 'chip-on' : ''}`}
           onClick={() => onSelectRev(null)}>
