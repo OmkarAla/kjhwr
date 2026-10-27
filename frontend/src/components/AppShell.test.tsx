@@ -61,6 +61,17 @@ describe('AppShell', () => {
     expect(screen.getByTestId('selected-rev')).toHaveTextContent('22:30 · D-1')
   })
 
+  it('opens and closes the glossary', async () => {
+    const user = userEvent.setup()
+    render(<AppShell />)
+    await user.click(await screen.findByRole('button', { name: /glossary/i }))
+    const dialog = screen.getByRole('dialog', { name: 'Glossary' })
+    expect(within(dialog).getByText('Decision revision')).toBeInTheDocument()
+    expect(within(dialog).getByText(/latest forecast that covers the whole delivery day/i)).toBeInTheDocument()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
   it('heatmap click switches delivery day', async () => {
     const user = userEvent.setup()
     render(<AppShell />)

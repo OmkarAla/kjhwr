@@ -6,6 +6,7 @@ import { MainChart } from './MainChart'
 import { KpiStrip } from './KpiStrip'
 import { AccuracyStrip } from './AccuracyStrip'
 import { ErrorBanner, GapChip, Skeleton } from './States'
+import { Glossary } from './Glossary'
 
 function parseState(): { date: string | null; rev: string | null; overlayRev: string | null } {
   const p = new URLSearchParams(window.location.search)
@@ -52,6 +53,7 @@ export function AppShell() {
       <header className="topbar">
         <span className="brand">GB WIND · DAY-AHEAD PORTAL</span>
         <span className="brand-sub">delivery-day wind & forecast accuracy · Elexon BMRS · Jan 2026</span>
+        <Glossary />
       </header>
 
       {calendar.error && <ErrorBanner message={`calendar: ${calendar.error}`} onRetry={calendar.refetch} />}

@@ -2096,7 +2096,7 @@ createRoot(document.getElementById('root')!).render(
 )
 ```
 
-`frontend/index.html`: set `<title>GB Wind · Day-Ahead Portal</title>`.
+(Amendment: topbar gains a Glossary button opening a modal (`Glossary.tsx`) that defines delivery day, decision revision, auto, lead times, overlay, gap, MAE, RMSE, MAPE, bias and scored hours in plain English. Escape, backdrop click or × closes it, and focus returns to the trigger. Tests: open + Escape close.)
 
 - [ ] **Step 6: Write styles.css**
 
