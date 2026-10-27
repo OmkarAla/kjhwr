@@ -166,6 +166,6 @@ cd frontend && npm run lint && npm run build
 
 ## AI tools disclosure
 
-Built with assistance from an AI coding agent (opencode CLI) for planning, code generation,
-code review and test scaffolding. The decision-revision rule, product scope and deployment
-choices were human-directed.
+Built with assistance from an AI coding agent (opencode CLI) for planning, code review and
+test scaffolding. The decision-revision rule, product scope and deployment choices were
+human-directed.
