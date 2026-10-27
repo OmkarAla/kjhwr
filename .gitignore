@@ -8,3 +8,9 @@ node_modules/
 venv/
 .pytest_cache/
 .env
+
+# internal working notes (kept locally, not published)
+/docs/
+/explain.md
+/plan.md
+/skill-list.md
