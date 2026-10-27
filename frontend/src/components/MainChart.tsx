@@ -18,9 +18,19 @@ export function MainChart({ day, selectedRev, overlayRev }: {
       overlay: ov?.points.find((p) => p.t === a.t)?.mw ?? null,
     }))
 
+  const isDecision = !selectedRev || selectedRev === day.decision_publish_time
+  const covered = data.filter((d) => d.forecast != null).length
+  const partial = data.length > 0 && covered < data.length
+  const note = partial
+    ? `${covered} of ${data.length} h covered by this revision`
+    : null
+
   return (
     <section className="panel panel-main" aria-label="wind generation chart">
-      <h4>HOURLY WIND GENERATION · MW</h4>
+      <div className="panel-head">
+        <h4>HOURLY WIND GENERATION · MW</h4>
+        {note && <span className="chart-note">{note}</span>}
+      </div>
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
           <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
@@ -34,7 +44,8 @@ export function MainChart({ day, selectedRev, overlayRev }: {
           />
           <Legend wrapperStyle={{ color: '#64748b', fontSize: 11 }} />
           <Line name="Actual" dataKey="actual" stroke="#d97706" strokeWidth={2} dot={false} />
-          <Line name="Decision forecast" dataKey="forecast" stroke="#0284c7" strokeWidth={2.6} dot={false} connectNulls />
+          <Line name={isDecision ? 'Decision forecast' : 'Selected revision'} dataKey="forecast"
+            stroke="#0284c7" strokeWidth={2.6} dot={covered <= 6 ? { r: 2.5, strokeWidth: 0 } : false} connectNulls />
           {ov && <Line name="Overlay revision" dataKey="overlay" stroke="#6366f1" strokeWidth={1.6} strokeDasharray="5 4" dot={false} connectNulls />}
         </LineChart>
       </ResponsiveContainer>

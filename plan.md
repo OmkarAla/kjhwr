@@ -1659,6 +1659,8 @@ export function MainChart({ day, selectedRev, overlayRev }: {
 ```
 (Amendment: XAxis `ticks` omitted — recharts v3.10.1 explicit ticks cannot map these category strings at runtime; auto axis renders 12 labels every 2 h. Verified by jsdom probe.)
 
+(Amendment: chart labels the forecast series by selection — "Decision forecast" only when the decision revision is selected, otherwise "Selected revision" — and shows a coverage note ("N of M h covered by this revision") when the chosen revision overlaps only part of the delivery day; sparse forecast lines (≤6 points) get dots so short segments stay visible. This surfaces post-delivery revisions (e.g. the D+1 issue) that only cover the final hours of the day. Tests: non-decision label + coverage note, and no note on full coverage.)
+
 - [ ] **Step 4: Implement AccuracyStrip**
 
 `frontend/src/components/AccuracyStrip.tsx`:

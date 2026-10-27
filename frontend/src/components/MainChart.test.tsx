@@ -69,4 +69,16 @@ describe('MainChart', () => {
     expect(container.querySelectorAll('.recharts-line')).toHaveLength(2)
     expect(screen.getByText('Decision forecast')).toBeInTheDocument()
   })
+
+  it('labels a non-decision revision and reports its partial coverage', () => {
+    render(<MainChart day={day} selectedRev="2025-12-31T23:30:00Z" overlayRev={null} />)
+    expect(screen.getByText('Selected revision')).toBeInTheDocument()
+    expect(screen.queryByText('Decision forecast')).not.toBeInTheDocument()
+    expect(screen.getByText('1 of 2 h covered by this revision')).toBeInTheDocument()
+  })
+
+  it('shows full coverage without a note', () => {
+    render(<MainChart day={day} selectedRev="2026-01-01T11:30:00Z" overlayRev={null} />)
+    expect(screen.queryByText(/covered by this revision/)).not.toBeInTheDocument()
+  })
 })
