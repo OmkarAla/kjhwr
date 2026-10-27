@@ -22,7 +22,7 @@ export function useApi<T>(path: string | null) {
       setLoading(true)
       setError(null)
       getJson<T>(path, ctl.signal)
-        .then(setData)
+        .then((d) => { if (!ctl.signal.aborted) setData(d) })
         .catch((e: unknown) => {
           if ((e as Error).name !== 'AbortError') setError(String((e as Error).message))
         })

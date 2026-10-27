@@ -10,7 +10,7 @@ from app.etl.ingest import IngestConfig, default_seed_http_get, run_ingest
 
 def main() -> None:
     cfg = IngestConfig(
-        db_path=Path("/srv/data/app.db"),
+        db_path=Path("/srv/baked/app.db"),
         http_get=default_seed_http_get("/srv/db_seed"),
     )
     summary = run_ingest(cfg)

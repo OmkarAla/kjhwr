@@ -2191,7 +2191,7 @@ main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; 
 ```bash
 cd frontend && npm test && npm run lint && npm run build
 ```
-Expected: 17 passed (4 hook + 4 kpi + 1 format + 1 mainchart + 4 accstrip + 3 appshell). Fix test races until green.
+Expected: 18 passed (4 hook + 4 kpi + 1 format + 1 mainchart + 4 accstrip + 4 appshell). Fix test races until green.
 
 - [ ] **Step 8: Commit**
 
@@ -2466,7 +2466,7 @@ from app.etl.ingest import IngestConfig, default_seed_http_get, run_ingest
 
 def main() -> None:
     cfg = IngestConfig(
-        db_path=Path("/srv/data/app.db"),
+        db_path=Path("/srv/baked/app.db"),
         http_get=default_seed_http_get("/srv/db_seed"),
     )
     summary = run_ingest(cfg)
@@ -2491,9 +2491,11 @@ COPY app ./app
 COPY scripts ./scripts
 COPY db_seed ./db_seed
 ENV DB_PATH=/srv/data/app.db
-RUN mkdir -p /srv/data && python scripts/build_db_docker.py
-CMD ["sh", "-c", "uvicorn app.api.main:create_app --factory --host 0.0.0.0 --port ${PORT:-8000}"]
+RUN mkdir -p /srv/baked /srv/data && python scripts/build_db_docker.py
+CMD ["sh", "-c", "mkdir -p $(dirname ${DB_PATH}) && { test -f ${DB_PATH} || cp /srv/baked/app.db ${DB_PATH}; } && uvicorn app.api.main:create_app --factory --host 0.0.0.0 --port ${PORT:-8000}"]
 ```
+
+(Amendment: db is baked to `/srv/baked/app.db` and the CMD copies it to `${DB_PATH}` when absent — the compose `./data` mount must not shadow the baked db on fresh clones.)
 
 `backend/.dockerignore` (remove the `scripts/` line — scripts must bake):
 ```

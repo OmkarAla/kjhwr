@@ -35,6 +35,7 @@ and are documented in `docs/`.
 
 ## How to run (local docker)
     docker compose up --build -d
+    # backend image bakes app.db from the committed seed CSVs; compose mounts ./data — the CMD copies the baked db in when data/app.db is absent
     # UI:   http://localhost:8080   (nginx serves React; browser fetches the API on :8000)
     # API:  http://localhost:8000/api/health
 
