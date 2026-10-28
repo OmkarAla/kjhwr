@@ -52,13 +52,21 @@ Backend (Python 3.11+):
 ```bash
 cd backend
 python -m venv venv
+
 # Windows
 venv\Scripts\pip install -r requirements.txt -r requirements-dev.txt
+venv\Scripts\python scripts\build_db.py --source seed
+set DB_PATH=..\data\app.db
 venv\Scripts\uvicorn app.api.main:create_app --factory --port 8000
+
 # macOS / Linux
 venv/bin/pip install -r requirements.txt -r requirements-dev.txt
-venv/bin/uvicorn app.api.main:create_app --factory --port 8000
+venv/bin/python scripts/build_db.py --source seed
+DB_PATH=../data/app.db venv/bin/uvicorn app.api.main:create_app --factory --port 8000
 ```
+
+`build_db.py` writes the repository-level `data/app.db`; the explicit `DB_PATH` makes the
+API read that file when uvicorn is launched from `backend/`.
 
 Frontend (Node 20+):
 
