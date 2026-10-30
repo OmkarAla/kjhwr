@@ -1,5 +1,7 @@
 # GB Wind Day-Ahead Portal
 
+**Live application:** <https://kjhwr-sigma-three.vercel.app/>
+
 A decision-support dashboard for a UK energy utility's day-ahead trading desk. It answers
 two questions for every January 2026 delivery day:
 
@@ -159,8 +161,9 @@ cd frontend && npm run lint && npm run build
 
 ## Deployment
 
-The repository is configured as one **Vercel Services** project. The root `vercel.json`
-builds two services on one domain:
+The repository is configured as one **Vercel Services** project and is live at
+<https://kjhwr-sigma-three.vercel.app/>. The root `vercel.json` builds two services on one
+domain:
 
 - `backend` — FastAPI at `backend/`, exposed only under `/api/*`.
 - `frontend` — Vite at `frontend/`, exposed at every other path.
