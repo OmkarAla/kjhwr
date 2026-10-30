@@ -106,9 +106,9 @@ def make_app(db_path: str | os.PathLike, allowed_origins: list[str] | None = Non
     return app
 
 
-def create_app() -> FastAPI:
+def create_app(db_path: str | os.PathLike | None = None) -> FastAPI:
     origins = os.environ.get("ALLOWED_ORIGINS", "")
     return make_app(
-        db_path=os.environ.get("DB_PATH", "data/app.db"),
+        db_path=db_path or os.environ.get("DB_PATH", "data/app.db"),
         allowed_origins=[o.strip() for o in origins.split(",") if o.strip()] or None,
     )

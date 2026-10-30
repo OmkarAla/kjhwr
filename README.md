@@ -76,8 +76,8 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
-`VITE_API_BASE` defaults to `http://localhost:8000`; set it to point the dev UI at another
-API host.
+The Vite dev server proxies `/api` to `http://localhost:8000`, so the app uses same-origin
+URLs by default. Set `VITE_API_BASE` only when the browser must call a different API origin.
 
 ## Rebuilding the database
 
@@ -137,13 +137,14 @@ backend/
   app/db.py              SQLite schema and connection
   app/etl/               align, decision, ingest, metrics
   scripts/               seed generation and database builds
+  server.py              Vercel FastAPI entrypoint
   db_seed/               committed Elexon CSVs (baked into the image)
   tests/                 pytest suite
 frontend/
   src/components/        AppShell, ControlRail, MainChart, KpiStrip, AccuracyStrip, Glossary
   src/hooks/useApi.ts    fetch hook with loading/error/retry
   src/lib/format.ts      number, date and percentage formatting
-  vercel.json            SPA rewrites for static hosting
+vercel.json              Vercel Services routing: /api backend, all other paths frontend
 data/seed/               committed seed CSVs for local/offline builds
 docker-compose.yml       backend + nginx frontend parity stack
 ```
@@ -151,19 +152,28 @@ docker-compose.yml       backend + nginx frontend parity stack
 ## Tests
 
 ```bash
-cd backend  && venv\Scripts\pytest      # 36 tests
-cd frontend && npm test                 # 25 tests
+cd backend  && venv\Scripts\pytest      # 39 tests
+cd frontend && npm test                 # 26 tests
 cd frontend && npm run lint && npm run build
 ```
 
 ## Deployment
 
-- **Frontend — Vercel**: project root `frontend`; set `VITE_API_BASE` to the API URL at
-  build time. `vercel.json` rewrites all routes to `index.html`.
-- **Backend — Render**: Web Service from `backend/` using the Dockerfile; health check
-  `/api/health`; set `ALLOWED_ORIGINS` to the Vercel origin and `DB_PATH` if you are not
-  using the default. The image ships a baked database, so no external storage is required.
-  Free instances cold-start in roughly 50 seconds.
+The repository is configured as one **Vercel Services** project. The root `vercel.json`
+builds two services on one domain:
+
+- `backend` — FastAPI at `backend/`, exposed only under `/api/*`.
+- `frontend` — Vite at `frontend/`, exposed at every other path.
+
+`/api/*` is routed to the backend, and the client uses same-origin URLs, so no API host or
+service binding is required in the browser. The backend build creates `backend/data/app.db`
+from the committed seed CSVs and bundles it into the function; at runtime it is copied to
+the instance's temporary directory because Vercel's function bundle is read-only.
+
+Run the full stack locally with `vercel dev --local`, or deploy the repository as one
+Vercel project. No `VITE_API_BASE`, `DB_PATH` or `ALLOWED_ORIGINS` is needed for the default
+same-origin deployment. Set `VITE_API_BASE` only if the frontend must use an external API,
+and `DB_PATH` only if the API should read a different database.
 
 ## Known limitations
 

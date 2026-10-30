@@ -2,6 +2,8 @@
 .playwright-mcp/
 data/*.db
 data/*.db-*
+backend/data/
+.vercel/
 __pycache__/
 node_modules/
 .worktrees/
