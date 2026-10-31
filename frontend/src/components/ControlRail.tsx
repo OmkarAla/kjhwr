@@ -111,8 +111,10 @@ export function ControlRail({ dates, date, onChangeDate, day, month, rev, overla
         <>
           <div className="rail-label">JANUARY KPIs</div>
           <div className="rail-grid">
-            <div>MAE <b>{fmtNum(month.mae)}</b></div>
-            <div>MAPE <b>{fmtPercent(month.mape)}</b></div>
+            <div>MAE <b data-testid="month-kpi-mae">{fmtNum(month.mae)}</b></div>
+            <div>RMSE <b data-testid="month-kpi-rmse">{fmtNum(month.rmse)}</b></div>
+            <div>MAPE <b data-testid="month-kpi-mape">{fmtPercent(month.mape)}</b></div>
+            <div>Bias <b data-testid="month-kpi-bias">{fmtNum(month.bias)}</b></div>
           </div>
         </>
       )}

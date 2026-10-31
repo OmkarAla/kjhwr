@@ -47,6 +47,8 @@ describe('AppShell', () => {
     render(<AppShell />)
     await waitFor(() => expect(screen.getByText('DELIVERY DAY')).toBeInTheDocument())
     expect(screen.getByTestId('kpi-mae')).toHaveTextContent('200.0 MW')
+    expect(screen.getByTestId('month-kpi-rmse')).toHaveTextContent('230.0')
+    expect(screen.getByTestId('month-kpi-bias')).toHaveTextContent('90.0')
     const list = screen.getByRole('listbox', { name: 'revisions' })
     expect(within(list).getAllByRole('option').length).toBe(3)
     expect(screen.getByText('D-1 · 1 Jan')).toBeInTheDocument()
